@@ -1,0 +1,70 @@
+# The app's fast checks on every push and pull request: the analyzer, every
+# test but the goldens (goldens.yml runs those in their pinned container), and
+# the walk's guard from CLAUDE.md.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# It reads the code and needs nothing more. A pull request from a fork runs it
+# with this token alone and no secrets, and nothing here needs one.
+permissions:
+  contents: read
+
+jobs:
+  analyze-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      # Each action pinned to the commit its release names, so a moved tag
+      # cannot change what runs here.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # The Flutter the dev Mac and Modal's fold image run. The goldens' own
+      # container pins its own (tool/goldens/Dockerfile).
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: 3.47.3
+          cache: true
+
+      # The bundle declares .env, which git does not keep; the tests never read
+      # it (tool/goldens/run.sh does the same).
+      - name: the bundle's .env
+        run: cp .env.example .env
+
+      - run: flutter pub get
+
+      - run: flutter analyze
+
+      # A golden test outside its pinned container skips itself and says so;
+      # everything else runs. Opt-in checks (*_check.dart) skip unless asked.
+      - run: flutter test
+
+  walk-guard:
+    # CLAUDE.md's guard over what this push or pull request brings: no walk
+    # test edited, test/fixtures only added to, no golden PNG changed.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: the walk's guard
+        env:
+          START: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$START" ] || [ -z "${START//0/}" ] || ! git cat-file -e "$START^{commit}" 2>/dev/null; then
+            echo "No earlier commit to hold this one to: nothing to guard."
+            exit 0
+          fi
+          # A walk change the user asked for by name is marked so in its
+          # commit message, and passes; CLAUDE.md says who may approve one.
+          if git log --format=%B "$START..HEAD" | grep -q '^Walk-change: approved'; then
+            echo "::notice::A commit since $START is marked 'Walk-change: approved'; the walk's guard is not applied."
+            exit 0
+          fi
+          bash tool/walk_guard.sh "$START"

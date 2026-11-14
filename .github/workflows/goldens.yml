@@ -1,5 +1,6 @@
-# The test suite, goldens included, in the one environment the goldens were
-# made in: tool/goldens/Dockerfile. docs/goldens.md explains the pinning.
+# The goldens, in the one environment they were made in: tool/goldens/Dockerfile.
+# docs/goldens.md explains the pinning. The rest of the suite runs in ci.yml, so
+# a red run here means a picture changed and nothing else.
 name: goldens
 
 on:
@@ -23,8 +24,8 @@ jobs:
       # cannot change what runs here.
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - name: flutter test in the golden container
-        run: bash tool/goldens/goldens.sh --reporter expanded
+      - name: the goldens in their container
+        run: bash tool/goldens/goldens.sh test/goldens --reporter expanded
 
       - name: keep the diff of every golden that failed
         if: failure()

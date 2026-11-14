@@ -1,0 +1,117 @@
+# Regenerate named goldens in their pinned container on GitHub's x86-64
+# runner, and open a pull request with the PNGs alone, for the user to look at
+# every one before it is merged (docs/goldens.md, "Regenerating"). Started by
+# hand only; never to make a run pass.
+name: update goldens
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: >-
+          What to regenerate, one per line: a golden test file, or a file, a "|"
+          and the --plain-name of one test in it.
+        type: string
+        default: |
+          test/goldens/catalog_pages_test.dart
+          test/goldens/screen_render_test.dart|home screen
+          test/goldens/walk_surfaces_test.dart|a base sheet open on the mRNA
+      may_change:
+        description: >-
+          The existing PNGs these may change, space-separated. Any other
+          existing PNG that changes fails the run; new PNGs are always allowed.
+        type: string
+        default: test/goldens/screens/home.png test/goldens/surfaces/mrna-base-sheet.png
+
+# It pushes a branch and opens a pull request from it; nothing else.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  regenerate:
+    # x86-64 Linux, the architecture the goldens were made on; the container
+    # pins the rest.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: regenerate in the golden container
+        env:
+          TESTS: ${{ inputs.tests }}
+        run: |
+          while IFS= read -r line; do
+            line="$(printf '%s' "$line" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+            [ -z "$line" ] && continue
+            file="${line%%|*}"
+            if [ "$file" != "$line" ]; then
+              echo "== $file, '${line#*|}'"
+              bash tool/goldens/goldens.sh --update-goldens "$file" --plain-name "${line#*|}"
+            else
+              echo "== $file"
+              bash tool/goldens/goldens.sh --update-goldens "$file"
+            fi
+          done <<< "$TESTS"
+
+      # Only the PNGs asked for: a new PNG anywhere under test/goldens, and an
+      # existing one only if may_change names it. Anything else there (an
+      # existing PNG nobody named, a file that is not a PNG, a deletion) fails,
+      # and the goldens are not trusted until it is understood. Only
+      # test/goldens is committed, so nothing outside it is looked at.
+      - name: only the PNGs asked for
+        env:
+          MAY_CHANGE: ${{ inputs.may_change }}
+        run: |
+          bad=0
+          while IFS= read -r entry; do
+            [ -z "$entry" ] && continue
+            state="${entry:0:2}"; path="${entry:3}"
+            case "$path" in test/goldens/failures/*) continue ;; esac
+            if [ "$state" = "??" ] && [[ "$path" == test/goldens/* ]]; then
+              continue
+            fi
+            if [ "$state" = " M" ] && [[ "$path" == *.png ]] && [[ " $MAY_CHANGE " == *" $path "* ]]; then
+              continue
+            fi
+            echo "::error::not asked for: $entry"; bad=1
+          done < <(git status --porcelain --untracked-files=all -- test/goldens)
+          exit "$bad"
+
+      - name: open a pull request with the PNGs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTS: ${{ inputs.tests }}
+        run: |
+          git add --all -- test/goldens ':!test/goldens/failures'
+          if git diff --cached --quiet; then
+            echo "Every golden asked for is as committed: nothing to propose."
+            exit 0
+          fi
+          branch="goldens/regenerated-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          {
+            echo "goldens: regenerated on GitHub's x86-64 runner"
+            echo
+            echo "In tool/goldens' pinned container, run ${GITHUB_RUN_ID}, from:"
+            printf '%s\n' "$TESTS" | sed '/^[[:space:]]*$/d; s/^/  /'
+            echo
+            echo "Walk-change: approved"
+          } > message.txt
+          git commit --quiet --file message.txt
+          git push --quiet origin "$branch"
+          {
+            echo "Goldens regenerated in their pinned container on GitHub's x86-64 runner (run ${GITHUB_RUN_ID})."
+            echo
+            echo "**Look at every PNG before merging** (the Files tab shows each as an image diff). Merging is the approval: the commit carries \`Walk-change: approved\`, so the walk's guard lets it through."
+            echo
+            echo "| Change | PNG |"
+            echo "|---|---|"
+            git diff --name-status HEAD~1 HEAD -- test/goldens | sed -E 's/^A\t/| added | /; s/^M\t/| changed | /; s/$/ |/'
+            echo
+            echo "Then bring docs/goldens.md's counts up to date in a commit of its own."
+          } > body.md
+          gh pr create --base main --head "$branch" \
+            --title "goldens: regenerated on GitHub's x86-64 runner" --body-file body.md

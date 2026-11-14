@@ -59,7 +59,11 @@ must print nothing, and `python3 tool/fixtures_added_only.py <start>` and
 `git diff --quiet --diff-filter=MRD <start> -- 'test/goldens/**/*.png'` must
 exit 0 (the first command cannot see a PNG change: git prints "Binary files
 differ" for it, with no `+` or `-` line), where `<start>` is the commit the
-session began from.
+session began from. `tool/walk_guard.sh <start>` runs all three. CI runs it on
+every push too (`.github/workflows/ci.yml`, job `walk-guard`, from the commit
+before the push); a commit whose message carries the trailer
+`Walk-change: approved` passes it, and is for a walk change the user asked for
+by name, or the goldens it regenerates.
 
 Git: commit the session's own changes locally. Never push, in any form.
 
@@ -1132,13 +1136,16 @@ dart run build_runner build    # after editing gene_record_dto.dart
 **Render baseline: `tool/goldens/goldens.sh`** (Git Bash, with Docker running).
 It runs `flutter test` in the one environment the goldens are made and checked
 in: `tool/goldens/Dockerfile`, Ubuntu 24.04 pinned by digest, Flutter 3.47.5,
-x86-64. The zero-diff proof is `tool/goldens/goldens.sh test/goldens`; the
-whole suite, as CI runs it, is `tool/goldens/goldens.sh`. A native
+x86-64. The zero-diff proof is `tool/goldens/goldens.sh test/goldens`, which
+CI runs on every push (`goldens.yml`); the rest of the suite runs natively in
+`ci.yml` (`flutter analyze` and `flutter test` on Flutter 3.47.3), and
+`tool/goldens/goldens.sh` alone runs the whole suite in the container. A native
 `flutter test` skips every golden test with that reason, because text is
 rasterised by the host and a native Windows run differs at every glyph edge.
 A failed golden leaves its diff in `test/goldens/failures/`. Regenerating is
 session 99's job alone: `docs/goldens.md` has the environment, the commands
-and the rules.
+and the rules, and the `update goldens` workflow, which regenerates named tests
+on GitHub's x86-64 runner and proposes the PNGs as a pull request.
 
 Natively on Windows, `protein_catalog_test.dart`'s "every track is fetched,
 and none of them ships" fails before any session touches it: it compares

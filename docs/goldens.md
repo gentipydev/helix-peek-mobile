@@ -47,6 +47,12 @@ be traced to it. If it does happen, trust the container on this laptop (the
 machine the goldens were made on) as the source of truth, and treat a CI
 failure as a lead to reproduce there, not as a verdict.
 
+What the runs have said since: every one from 2026-10-08 to 2026-11-14 failed
+only on PNGs owed for known reasons (new catalog pages not yet generated, and
+pages changed on purpose) and passed every other golden, whichever runner it
+got. The runners reproduce this laptop's pixels, so they may regenerate too
+(below).
+
 The container runs with Apple Silicon's emulation too, but emulated x86 has no
 AVX2, so a run there is the unpinned case above. Use an x86-64 host.
 
@@ -90,7 +96,19 @@ tool/goldens/goldens.sh --update-goldens test/goldens/walk_surfaces_test.dart \
 ```
 
 Then look at every changed PNG, and commit the regenerated goldens alone, with
-nothing else in the commit. Changing Flutter or the base image (the `ARG` and
+nothing else in the commit.
+
+Or let GitHub's x86-64 runner do it: the `update goldens` workflow
+(`.github/workflows/update-goldens.yml`), started by hand from the Actions tab
+or with `gh workflow run update-goldens.yml`. It takes the tests to regenerate,
+one a line (a file, or a file, a `|` and a `--plain-name`), and the existing
+PNGs they may change; it runs them with `--update-goldens` in this container,
+fails if any other existing PNG changes, and opens a pull request with the PNGs
+alone, its commit marked `Walk-change: approved` for the walk's guard. Look at
+every image in the pull request before merging it: merging is the approval.
+Bring the counts at the top of this file up to date in a commit of its own. It
+needs the repository's "Allow GitHub Actions to create and approve pull
+requests" (Settings, Actions, General). Changing Flutter or the base image (the `ARG` and
 `FROM` lines, and `goldenEnvironment`) regenerates everything, and is its own
 commit for the same reason.
 
