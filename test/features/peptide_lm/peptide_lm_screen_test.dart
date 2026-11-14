@@ -12,7 +12,11 @@ import 'package:helixpeek/features/peptide_lm/domain/training_timeline.dart';
 import 'package:helixpeek/features/peptide_lm/domain/training_trace.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/cubit/peptide_lm_cubit.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/peptide_lm_screen.dart';
+import 'package:helixpeek/features/peptide_lm/presentation/scenes/embedding_scene.dart';
+import 'package:helixpeek/features/peptide_lm/presentation/scenes/lm_scene.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/scenes/lm_scene_painter.dart';
+import 'package:helixpeek/features/peptide_lm/presentation/scenes/stream_table.dart';
+import 'package:helixpeek/shared/anatomy/stage_bar.dart';
 
 import 'support/toy_trace.dart';
 
@@ -254,8 +258,111 @@ void main() {
     final Rect after = tester.getRect(name);
     expect(after.left, greaterThanOrEqualTo(0));
     expect(after.right, lessThanOrEqualTo(width));
-    // Just far enough: its right edge at the bar's.
-    expect(after.right, closeTo(width, 1));
+    // Just far enough: its right edge the bar's inset in from the bar's.
+    expect(after.right, closeTo(width - TrainingRunView.barInset, 1));
+  });
+
+  testWidgets('the stage bar stands its inset in from the sides and up from the bottom', (
+    WidgetTester tester,
+  ) async {
+    await host(tester);
+    final Finder first = find.byKey(const ValueKey<String>('stage-Tokenise'));
+    // With a name's own 8, its words start 20 in, as the caption's do.
+    expect(tester.getRect(first).left, closeTo(TrainingRunView.barInset, 0.5));
+    final Rect words = tester.getRect(find.descendant(of: first, matching: find.byType(Text)));
+    expect(words.left, closeTo(20, 0.5));
+    expect(
+      tester.getRect(find.byKey(const ValueKey<String>('peptide-lm-caption'))).left,
+      closeTo(words.left, 0.5),
+    );
+    final double bottom = tester.getRect(find.byType(Scaffold)).bottom -
+        tester.view.padding.bottom / tester.view.devicePixelRatio;
+    expect(bottom - tester.getRect(find.byType(StageBar)).bottom, closeTo(TrainingRunView.barInset, 0.5));
+    // Scrolled to its end, the last name stands as far in from the right.
+    await tester.drag(find.byKey(const ValueKey<String>('peptide-lm-stages')), const Offset(-2000, 0));
+    await tester.pump();
+    final double width = tester.getSize(find.byType(Scaffold)).width;
+    expect(
+      tester.getRect(find.byKey(const ValueKey<String>('stage-Loop'))).right,
+      closeTo(width - TrainingRunView.barInset, 0.5),
+    );
+  });
+
+  testWidgets('a swipe over the canvas plays the next stage, or the one before, as its name does', (
+    WidgetTester tester,
+  ) async {
+    await host(tester);
+    final Finder canvas = find.byKey(const ValueKey<String>('peptide-lm-canvas'));
+    int shown() => tester.widget<StageBar>(find.byType(StageBar)).index;
+
+    // Nothing before Tokenise.
+    await tester.drag(canvas, const Offset(200, 0));
+    await tester.pump();
+    expect(shown(), LmStage.tokenise.index);
+
+    // Leftwards, the next stage, from its start, its name scrolled into view.
+    await tester.drag(canvas, const Offset(-200, 0));
+    await tester.pump();
+    expect(shown(), LmStage.shift.index);
+    final String opening = caption(tester);
+    await tester.pump(TrainingRunView.beat * (LmStage.shift.beats + 1));
+    expect(caption(tester), isNot(opening));
+    await tapStage(tester, 'Shift');
+    await tester.pump();
+    expect(caption(tester), opening);
+
+    // Rightwards, the one before.
+    await tester.drag(canvas, const Offset(200, 0));
+    await tester.pump();
+    expect(shown(), LmStage.tokenise.index);
+    expect(caption(tester), startsWith('Two peptides'));
+
+    // Too short, or as far down as across, it turns nothing.
+    await tester.drag(canvas, const Offset(-40, 0));
+    await tester.pump();
+    expect(shown(), LmStage.tokenise.index);
+    await tester.drag(canvas, const Offset(-90, -90));
+    await tester.pump();
+    expect(shown(), LmStage.tokenise.index);
+
+    // Nothing after Loop.
+    await tapStage(tester, 'Loop');
+    await tester.pump();
+    await tester.drag(canvas, const Offset(-200, 0));
+    await tester.pump();
+    expect(shown(), LmStage.loop.index);
+    expect(caption(tester), startsWith('Step 1 of 20'));
+    await tester.pump(const Duration(milliseconds: 300));
+    final double width = tester.getSize(find.byType(Scaffold)).width;
+    expect(tester.getRect(find.byKey(const ValueKey<String>('stage-Loop'))).right, lessThanOrEqualTo(width));
+  });
+
+  testWidgets('up and down the token column follows a place; sideways there turns the stage', (
+    WidgetTester tester,
+  ) async {
+    await host(tester);
+    await tapStage(tester, 'Scores');
+    await tester.pump();
+    final Finder canvas = find.byKey(const ValueKey<String>('peptide-lm-canvas'));
+    LmView view() => (tester.widget<CustomPaint>(canvas).painter! as LmScenePainter).view;
+    final Offset origin = tester.getTopLeft(canvas);
+    final EmbeddingLayout rows = StreamTable(tester.getSize(canvas), view()).layout;
+    Offset row(int i) => origin + Offset(rows.left + 4, rows.tableTop + (i + 0.5) * rows.pitch);
+    final int last = rows.places - 1;
+    final int before = view().position;
+    expect(before, isNot(anyOf(1, last)));
+
+    // Down the column from row 1 to the last: the place under the finger.
+    await tester.dragFrom(row(1), row(last) - row(1));
+    await tester.pump();
+    expect(view().position, last);
+    expect(tester.widget<StageBar>(find.byType(StageBar)).index, LmStage.scores.index);
+
+    // Sideways from row 1: the next stage, the place kept.
+    await tester.dragFrom(row(1) + Offset(rows.pitch * 6, 0), const Offset(-200, 0));
+    await tester.pump();
+    expect(tester.widget<StageBar>(find.byType(StageBar)).index, LmStage.attention.index);
+    expect(view().position, last);
   });
 
   testWidgets('a checkpoint is picked from the menu, by step and loss', (

@@ -70,7 +70,9 @@ holds on its last frame until another is tapped, or the same one again.
 Beside the caption, a player of that stage alone: Replay, and Play/Pause.
 The stage bar keeps its names at full size and scrolls sideways where a
 phone is too narrow for all twelve; a stage played whose name stands partly
-out of view is scrolled just far enough to show it whole.
+out of view is scrolled just far enough to show it whole, the bar's inset
+beyond it. A sideways swipe over the canvas plays the next stage or the one
+before, as a tap on its name does.
 
 1. **Tokenise.** The dataset, a peptide a row folded onto two lines where
    the canvas lets square tiles carry their numbers (one line of tall tiles
@@ -1216,6 +1218,24 @@ three calls that were a matter of taste.
   in, the sections' paragraphs keep the quiet ink (the user's pick), and a
   page ends 24 pt under its last line: the last section's 20 pt had stood
   on the list's own 24.
+- **Stage bar** (2026-11-14, the user's ask: a little more room left,
+  right and below). The bar's scroll stands `TrainingRunView.barInset`, 12,
+  in from either end (was 4), so with a name's own 8 its first and last
+  names stand 20 from the edge, the caption's margin; and 12 up from the
+  safe area (was 4), which on an SE, with no home indicator, was all the
+  room under it. `_reveal` scrolls a name it brings into view to the same
+  inset, no longer flush with the edge. Every stage's canvas is 8 pt
+  shorter (Pro Max 699 → 691, 375 × 667: 483 → 475, Tokenise and
+  Embedding there 468 → 460); every stage's halfway and last frames at 440
+  and 375, steps 1 and 200, were looked at before and after: the same
+  layouts, nothing crossing.
+- **Swipe.** A sideways swipe over the canvas plays the stage beside, as a
+  tap on its name does (the user's ask the same day), at the walk's
+  thresholds: 48 pt from where the finger came down, more sideways than
+  down by 1.5×; nothing past Tokenise or Loop. The drag that follows a
+  place in Scores, Attention and Feed-forward, sideways until then, is now
+  up and down the token column, whose rows stand top to bottom, so the two
+  never compete: whichever way passes the slop first wins.
 - **Loop's scale names.** "nats" over the curve's numbers and "rate" by its
   strip are names, so both are in the label face and end at one x
   (`LoopLayout.namesRight`); numbers and levels stay in the mono. "rate" had

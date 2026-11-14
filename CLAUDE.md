@@ -194,11 +194,17 @@ schema or an array of another shape; the payload's shape is the backend's
 Twelve stages (`TrainingTimeline`, 266 beats), named on the shared
 `StageBar`, which scrolls sideways at full size where a phone is too narrow
 for it (a stage played whose name is partly out of view is scrolled just
-far enough to show it whole). A tap on a stage plays it once from its start, at the page's one
+far enough to show it whole, the bar's inset beyond it). The bar stands
+`TrainingRunView.barInset` (12) in from either end and up from the safe
+area, so with a name's own 8 its first and last names stand 20 from the
+edge, as the caption does (the user's ask of 2026-11-14). A tap on a stage plays it once from its start, at the page's one
 speed, a beat every two seconds (`TrainingRunView.beat`, the old 0.5×), and
 it holds on its last frame (`TrainingTimeline.frameIn`); nothing runs on
-into the next stage, and a tap on the stage on screen plays it again. The
-page opens playing Tokenise. Beside the caption, the stage's own player
+into the next stage, and a tap on the stage on screen plays it again. A
+sideways swipe over the canvas plays the next stage (leftwards) or the one
+before, as a tap on its name does, at the walk's thresholds (48 pt, more
+sideways than down by 1.5×; nothing past Tokenise or Loop; the user's ask of
+2026-11-14). The page opens playing Tokenise. Beside the caption, the stage's own player
 plays that stage and nothing else: Replay, and Play/Pause (Play from the
 end plays it again); no stepping between stages and no speeds (the user's
 choices of 2026-10-30, which retired the shared `TransportBar` here). The
@@ -216,8 +222,9 @@ user's ask of 2026-11-12). Each stage is a painter in
 `presentation/scenes/`, a pure function of the frame. A tap follows: a
 peptide tapped in Tokenise or Shift, or a line of Loss's or Backward's
 batch, is the one every stage from Embedding on works through, and a row
-tapped from Scores on (a drag along the token column in Scores, Attention
-and Feed-forward too) is the place the stage works out. Since 2026-11-12
+tapped from Scores on (a drag up or down the token column in Scores,
+Attention and Feed-forward too: sideways is the swipe's since 2026-11-14) is
+the place the stage works out. Since 2026-11-12
 the page says so, the user's picks after they learned a tap did more than
 highlight: Tokenise and Shift name the followed peptide in the accent, on a
 card a little towards it (`LmInks.followed`; in Shift its ids are the only

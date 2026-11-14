@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -88,6 +90,15 @@ class TrainingRunView extends StatefulWidget {
   /// change.
   static const Duration beat = Duration(seconds: 2);
 
+  /// The stage bar's room at either end and under it: with a name's own 8,
+  /// its first and last names stand 20 from the edge, as the caption does.
+  static const double barInset = 12;
+
+  /// How far a finger must travel sideways over the canvas, more sideways
+  /// than down by [swipeLean], to turn to the stage beside: the walk's swipe.
+  static const double swipeTravel = 48;
+  static const double swipeLean = 1.5;
+
   @override
   State<TrainingRunView> createState() => _TrainingRunViewState();
 }
@@ -113,6 +124,10 @@ class _TrainingRunViewState extends State<TrainingRunView>
   /// What [_reserve] was worked out for, and the height itself.
   Object? _reserveFor;
   double _reserve = 0;
+
+  /// Where a sideways drag over the canvas began, and where it is now.
+  Offset _swipeFrom = Offset.zero;
+  Offset _swipeTo = Offset.zero;
 
   TrainingTrace get _trace => widget.trace;
 
@@ -244,8 +259,9 @@ class _TrainingRunViewState extends State<TrainingRunView>
     });
   }
 
-  /// Scrolls the stage bar just far enough to show [stage]'s name whole,
-  /// where it stands partly out of view; otherwise the bar keeps still.
+  /// Scrolls the stage bar just far enough to show [stage]'s name whole, the
+  /// bar's own inset beyond it, where it stands partly out of view;
+  /// otherwise the bar keeps still.
   void _reveal(LmStage stage) {
     final BuildContext? bar = _bar.currentContext;
     if (bar == null) return;
@@ -263,20 +279,46 @@ class _TrainingRunViewState extends State<TrainingRunView>
 
     bar.visitChildElements(visit);
     final Element? found = name;
-    if (found == null) return;
-    final Duration duration = _reduced ? Duration.zero : const Duration(milliseconds: 220);
-    for (final ScrollPositionAlignmentPolicy policy in <ScrollPositionAlignmentPolicy>[
-      ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-      ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-    ]) {
+    final RenderObject? box = found?.renderObject;
+    if (found == null || box == null || !box.attached) return;
+    final ScrollPosition position = Scrollable.of(found).position;
+    final RenderAbstractViewport viewport = RenderAbstractViewport.of(box);
+    // Where the bar would stand with the name's start, or its end, the
+    // bar's inset inside its edge; the bar moves only as far as one of them.
+    const double inset = TrainingRunView.barInset;
+    final double first = viewport.getOffsetToReveal(box, 0).offset - inset;
+    final double last = viewport.getOffsetToReveal(box, 1).offset + inset;
+    final double shown = position.pixels.clamp(math.min(first, last), first);
+    final double to = shown.clamp(position.minScrollExtent, position.maxScrollExtent);
+    if ((to - position.pixels).abs() < 0.5) return;
+    if (_reduced) {
+      position.jumpTo(to);
+    } else {
       unawaited(
-        Scrollable.ensureVisible(
-          found,
-          duration: duration,
+        position.animateTo(
+          to,
+          duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          alignmentPolicy: policy,
         ),
       );
+    }
+  }
+
+  /// Plays the stage [delta] from the one on screen, as a tap on its name
+  /// does, where there is one.
+  void _turn(int delta) {
+    final int next = _stage.index + delta;
+    if (next < 0 || next >= LmStage.values.length) return;
+    _play(LmStage.values[next]);
+  }
+
+  /// A sideways swipe over the canvas, far enough and more sideways than
+  /// down, turns to the next stage (leftwards) or the one before.
+  void _finishSwipe() {
+    final Offset travel = _swipeTo - _swipeFrom;
+    if (travel.dx.abs() >= TrainingRunView.swipeTravel &&
+        travel.dx.abs() > travel.dy.abs() * TrainingRunView.swipeLean) {
+      _turn(travel.dx < 0 ? 1 : -1);
     }
   }
 
@@ -374,13 +416,25 @@ class _TrainingRunViewState extends State<TrainingRunView>
                   final Size size = constraints.biggest;
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
+                    // A swipe's travel is from where the finger came down.
+                    dragStartBehavior: DragStartBehavior.down,
                     onTapUp: (TapUpDetails details) {
                       final TrainingFrame now = _frame();
                       final LmHit? hit = sceneOf(now.stage)
                           .hitAt(size, view, details.localPosition, now);
                       if (hit != null) _apply(hit);
                     },
+                    // Sideways turns the stage, as the bar's names do;
+                    // up and down a token column follows the place under
+                    // the finger, row by row.
+                    onHorizontalDragStart: (DragStartDetails details) {
+                      _swipeFrom = _swipeTo = details.localPosition;
+                    },
                     onHorizontalDragUpdate: (DragUpdateDetails details) {
+                      _swipeTo = details.localPosition;
+                    },
+                    onHorizontalDragEnd: (DragEndDetails details) => _finishSwipe(),
+                    onVerticalDragUpdate: (DragUpdateDetails details) {
                       final int? position = sceneOf(_frame().stage)
                           .positionAt(size, view, details.localPosition);
                       if (position != null && position != _position) {
@@ -471,15 +525,18 @@ class _TrainingRunViewState extends State<TrainingRunView>
             // The whole of one step and its loop in one row, at full size: it
             // scrolls sideways where a phone is too narrow for it, and is
             // centred where it is not. A tap plays a stage, the one on
-            // screen again.
+            // screen again; so does a swipe over the canvas, to the next or
+            // the one before.
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints box) => SingleChildScrollView(
                 key: const ValueKey<String>('peptide-lm-stages'),
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: TrainingRunView.barInset),
                 child: ConstrainedBox(
                   key: _bar,
-                  constraints: BoxConstraints(minWidth: math.max(0, box.maxWidth - 8)),
+                  constraints: BoxConstraints(
+                    minWidth: math.max(0, box.maxWidth - 2 * TrainingRunView.barInset),
+                  ),
                   child: Center(
                     child: StageBar(
                       labels: <String>[
@@ -493,7 +550,7 @@ class _TrainingRunViewState extends State<TrainingRunView>
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: TrainingRunView.barInset),
           ],
         ),
       ),
