@@ -799,3 +799,87 @@ String rulerLabel(double position, double step) {
   }
   return '${grouped(position.round())} bp';
 }
+
+
+/// How far the zoom's names, its scale bar, its credit and a number set on a
+/// mark keep from the canvas's edges, in pixels.
+const double canvasMargin = 8;
+
+/// The least room, in pixels, between two numbers of a ruler.
+const double numberGap = 4;
+
+/// The left edge of a number [width] wide set on [mark], with room from
+/// [low] to [high]: centred on the mark where it is whole between them, and
+/// otherwise moved inward just far enough; null where they leave it less
+/// room than its width.
+double? numberOnMark(double mark, double width, double low, double high) {
+  if (high - low < width) {
+    return null;
+  }
+  return (mark - width / 2).clamp(low, high - width);
+}
+
+/// Where each number of a ruler goes, on a canvas [canvas] pixels wide: the
+/// left edge of each, in the order of [marks], its ticks left to right, or
+/// null where it is left out. A number is centred on its tick where that
+/// leaves it whole on the canvas, [canvasMargin] in from its edges;
+/// otherwise it is moved inward just far enough ([numberOnMark]), so it
+/// still lies over its tick or begins within the margin of it. It is left
+/// out only where, so moved, it would come within [numberGap] of the number
+/// beside it; its tick is drawn all the same.
+List<double?> rulerNumberLefts(
+  List<double> marks,
+  List<double> widths,
+  double canvas,
+) {
+  final List<double?> placed = <double?>[
+    for (int i = 0; i < marks.length; i++)
+      numberOnMark(marks[i], widths[i], canvasMargin, canvas - canvasMargin),
+  ];
+  bool crowds(int i, int j) {
+    if (j < 0 || j >= marks.length || placed[j] == null) {
+      return false;
+    }
+    final double gap = i < j
+        ? placed[j]! - (placed[i]! + widths[i])
+        : placed[i]! - (placed[j]! + widths[j]);
+    return gap < numberGap;
+  }
+
+  return <double?>[
+    for (int i = 0; i < marks.length; i++)
+      placed[i] == null ||
+              (placed[i] != marks[i] - widths[i] / 2 &&
+                  (crowds(i, i - 1) || crowds(i, i + 1)))
+          ? null
+          : placed[i],
+  ];
+}
+
+/// The left edge of an exon's number [width] wide, over the exon drawn from
+/// [left] to [right] on a canvas [canvas] pixels wide: centred over it, and
+/// moved to stay over the part of it on the canvas, [canvasMargin] in from
+/// its edges; null where that part is narrower than the number.
+double? exonNumberLeft(
+  double left,
+  double right,
+  double width,
+  double canvas,
+) => numberOnMark(
+  (left + right) / 2,
+  width,
+  math.max(left, canvasMargin),
+  math.min(right, canvas - canvasMargin),
+);
+
+/// A number set on a mark: the mark's x on screen, what the number reads,
+/// how large it is set, and its box on screen, or null where it is left out.
+@immutable
+final class MarkNumber {
+  const MarkNumber(this.mark, this.text, this.size, this.box);
+
+  final double mark;
+  final String text;
+  final Size size;
+  final Rect? box;
+}

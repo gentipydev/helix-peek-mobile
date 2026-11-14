@@ -401,8 +401,8 @@ class ZoomOverlayPainter extends CustomPainter {
   final String credit;
 
   /// How far a name, the scale bar and the credit keep from the canvas's
-  /// edges.
-  static const double margin = 8;
+  /// edges: the zoom's own margin, which a ruler's numbers keep too.
+  static const double margin = canvasMargin;
 
   @override
   void paint(Canvas canvas, Size size) {

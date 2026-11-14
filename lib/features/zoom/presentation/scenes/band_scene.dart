@@ -181,12 +181,7 @@ final class BandScene extends ZoomScene {
     final ZoomInks inks = frame.inks;
     final (double ruler, double dock, double mark) = _beats(frame);
     double clampX(double x) => x.clamp(-8.0, w + 8);
-    final double left =
-        subject.bandMiddle +
-        frame.view.fromScreen(Offset.zero, frame.size).dx * _width;
-    final double right =
-        subject.bandMiddle +
-        frame.view.fromScreen(Offset(w, 0), frame.size).dx * _width;
+    final (double left, double right) = _stretch(frame);
     final double y = stripY(frame);
 
     // The funnel from the docked chromosome's box down to the strip, under
@@ -329,8 +324,60 @@ final class BandScene extends ZoomScene {
     }
   }
 
+  /// The genome's positions at the view's left and right edges at [frame].
+  (double, double) _stretch(ZoomFrame frame) => (
+    subject.bandMiddle +
+        frame.view.fromScreen(Offset.zero, frame.size).dx * _width,
+    subject.bandMiddle +
+        frame.view.fromScreen(Offset(frame.size.width, 0), frame.size).dx *
+            _width,
+  );
+
+  /// The ruler's numbers at [frame], a tick each, left to right, as they are
+  /// set under their ticks ([rulerNumberLefts]).
+  @visibleForTesting
+  List<MarkNumber> rulerNumbers(ZoomFrame frame) {
+    final (double left, double right) = _stretch(frame);
+    return _rulerNumbers(frame, left, right, stripY(frame) + rulerY);
+  }
+
+  List<MarkNumber> _rulerNumbers(
+    ZoomFrame frame,
+    double left,
+    double right,
+    double y,
+  ) {
+    final double step = roundStep((right - left) / 4);
+    final List<double> marks = <double>[];
+    final List<String> texts = <String>[];
+    final List<Size> sizes = <Size>[];
+    for (double at = (left / step).ceil() * step; at <= right; at += step) {
+      final String text = rulerLabel(at, step);
+      final TextPainter number = TextPainter(
+        text: TextSpan(text: text, style: frame.labels),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      marks.add(_x(frame, at));
+      texts.add(text);
+      sizes.add(number.size);
+      number.dispose();
+    }
+    final List<double?> lefts = rulerNumberLefts(marks, <double>[
+      for (final Size size in sizes) size.width,
+    ], frame.size.width);
+    return <MarkNumber>[
+      for (int i = 0; i < marks.length; i++)
+        MarkNumber(
+          marks[i],
+          texts[i],
+          sizes[i],
+          lefts[i] == null ? null : Offset(lefts[i]!, y + 7) & sizes[i],
+        ),
+    ];
+  }
+
   /// A ruler across the view, ticks at a round step and each numbered
-  /// under it.
+  /// under it, whole on the canvas ([rulerNumberLefts]).
   void _ruler(
     Canvas canvas,
     ZoomFrame frame,
@@ -340,25 +387,27 @@ final class BandScene extends ZoomScene {
     double alpha,
   ) {
     final double w = frame.size.width;
-    final double step = roundStep((right - left) / 4);
     final Paint rule = Paint()
       ..strokeWidth = 1
       ..color = frame.inks.outline.withValues(alpha: alpha);
     canvas.drawLine(Offset(0, y), Offset(w, y), rule);
     rule.color = frame.inks.label.withValues(alpha: alpha);
-    for (double at = (left / step).ceil() * step; at <= right; at += step) {
-      final double x = _x(frame, at);
-      canvas.drawLine(Offset(x, y - 4), Offset(x, y + 4), rule);
+    for (final MarkNumber tick in _rulerNumbers(frame, left, right, y)) {
+      canvas.drawLine(Offset(tick.mark, y - 4), Offset(tick.mark, y + 4), rule);
+      final Rect? box = tick.box;
+      if (box == null) {
+        continue;
+      }
       final TextPainter number = TextPainter(
         text: TextSpan(
-          text: rulerLabel(at, step),
+          text: tick.text,
           style: frame.labels.copyWith(
             color: frame.inks.label.withValues(alpha: alpha * frame.opacity),
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      number.paint(canvas, Offset(x - number.width / 2, y + 7));
+      number.paint(canvas, box.topLeft);
       number.dispose();
     }
   }

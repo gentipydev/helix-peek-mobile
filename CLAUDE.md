@@ -1107,7 +1107,9 @@ dart run build_runner build    # after editing gene_record_dto.dart
   and paints every stop of every protein the search offers, from the
   backend's census (`pipeline/locus/survey.py --gff`), on two phones. It
   holds every name whole on the canvas, clear of the others and of the
-  scale bar, and uncut, and writes `app_check.json`. It takes 18 minutes.
+  scale bar, and uncut, and every number on a ruler or over an exon whole
+  on the canvas, over its mark (`rulerNumberLefts`, `exonNumberLeft`), and
+  writes `app_check.json`. It takes 18 minutes.
 - `FOLD_BUNDLE=<dir> flutter test test/fold_bundle_check.dart` holds a fold the
   backend has baked for a protein built on demand (its row, `.glb`, scene and
   `folding` track) to the fold page's rules: the scene is the model, every

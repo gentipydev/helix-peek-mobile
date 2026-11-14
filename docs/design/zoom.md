@@ -1473,6 +1473,24 @@ zoom needed, each a rule for every protein (the user's decisions of
   others at rest is left out (`ZoomStage.crowdedAt`). The census leaves out
   five, all at 375×667: a cervix's "transformation zone", the "stomach" beside
   three esophagi, a parotid's "submandibular gland".
+- **Numbers on marks stay whole** (2026-11-14). A ruler's number, at the
+  band and at the gene, and an exon's number at the gene, is centred on its
+  mark where that leaves it whole on the canvas, the zoom's margin
+  (`canvasMargin`, 8 px) in from its edges. Otherwise it is moved inward
+  just far enough: a ruler's still lies over its tick, or begins within
+  the margin of it, and an exon's stays over the part of its exon the
+  canvas shows. A ruler's number is left out only where, so moved, it would
+  come within 4 px of the number beside it (`numberGap`), and its tick is
+  drawn all the same; an exon's where the part of its exon on the canvas is
+  narrower than it (`rulerNumberLefts`, `exonNumberLeft`, shared by the
+  painters and the checks). Centred, the band's ruler cut a number at the
+  canvas's edge for 13 of the 54 curated and 2,120 of the census's 7,299
+  at 326 px (GFAP's "42 Mb" read "2 Mb"; leptin's "127 Mb" lost 19 of its
+  44 px). Moved, none is cut; 15 lose a number to its neighbour, each
+  keeping three of four. Leaving out every number that did not fit, the
+  other rule weighed, would have left 1,012 rulers with one number. It
+  moves a number on 20 curated band stops at 326 px and 27 at 256 px, and
+  on no curated gene stop at rest.
 
 ## The camera
 
@@ -3475,7 +3493,8 @@ gives it its room.
   strip (2026-10-14); the gene's own card says its strand;
 - the whole chromosome docked at the top as a lit ideogram, the view boxed
   on it in the accent, and a funnel from the box down to the strip;
-- a ruler in Mb, 40 px below the middle.
+- a ruler in Mb, 40 px below the middle, its numbers whole on the canvas
+  (see "Built on demand", "Numbers on marks stay whole").
 
 **Into the gene.** The gene has a stop of its own between the band and the
 DNA. On 2026-10-14 it became one stop with the DNA, which looked like the

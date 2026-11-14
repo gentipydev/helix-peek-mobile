@@ -39,7 +39,12 @@ import 'features/zoom/catalogue_fixtures.dart';
 /// scene are made, and every stop is painted, into a picture never
 /// rasterised; its organ has an anatomy and its cell a shape; its
 /// chromosome a territory and a length; its gene's mark is on the band's
-/// strip; its gene's exons show whole at its stop, on the canvas; and, on
+/// strip; its gene's exons show whole at its stop, on the canvas; every
+/// number on the band's ruler, the gene's ruler and the gene's exons is
+/// wholly on the canvas, the zoom's margin in from its edges, over its mark
+/// or beginning within the margin of it, and clear of the next (one moved
+/// inward from an edge is counted, and so is one left out, as the painter
+/// leaves it); and, on
 /// the canvas its own card leaves it (the card grows to its tallest stop's
 /// words, the canvas giving way), at every stop every name's plate is
 /// wholly on the canvas, clear of
@@ -92,6 +97,8 @@ void main() {
       final Map<String, int> stagings = <String, int>{};
       final Map<String, double> leastCanvas = <String, double>{};
       final Map<String, String> shortest = <String, String>{};
+      // Numbers set on marks: checked, moved inward, left out.
+      final List<int> numbered = <int>[0, 0, 0];
       int elided = 0;
       final Set<String> seen = <String>{};
       final List<int> plates = <int>[0, 0, 0, 0];
@@ -197,6 +204,11 @@ void main() {
           } on Object catch (e) {
             fail('gene', 'threw: $e');
           }
+          try {
+            _numbers(stage, canvas, inks, labels, numbered, fail);
+          } on Object catch (e) {
+            fail('numbers', 'threw: $e');
+          }
           if (phone.width == 390) {
             if (p.path.tissue == null || tissueAnatomy[p.path.tissue] == null) {
               fail('organ', 'no anatomy for ${p.path.tissue}');
@@ -225,6 +237,9 @@ void main() {
         'plates_round_a_shape': plates[1],
         'plates_set_untracked': plates[2],
         'quiet_names_left_out': plates[3],
+        'numbers_checked': numbered[0],
+        'numbers_moved_inward': numbered[1],
+        'numbers_left_out': numbered[2],
         'elided_plates': elided,
         'failures': failures.length,
         'failure_list': failures,
@@ -440,6 +455,76 @@ void _gene(
     }
     if (scene is DnaScene && scene.exonsShown(frame) < 0.999) {
       fail('gene', 'its exons are not whole: ${scene.exonsShown(frame)}');
+    }
+  }
+}
+
+/// The numbers set on marks at the band's stop and the gene's, as their
+/// painters set them in [labels] (`rulerNumberLefts`, `exonNumberLeft`):
+/// each wholly on the canvas, the zoom's margin in from its edges; and a
+/// ruler's over its tick or beginning within the margin of it, and clear of
+/// the number before it by [numberGap]. Counts into [counted] each number
+/// checked, each moved inward and each left out.
+void _numbers(
+  ZoomStage stage,
+  Size canvas,
+  ZoomInks inks,
+  TextStyle labels,
+  List<int> counted,
+  void Function(String stop, String what) fail,
+) {
+  void check(String stop, List<MarkNumber> numbers, {required bool ruler}) {
+    Rect? previous;
+    for (final MarkNumber n in numbers) {
+      final Rect? box = n.box;
+      if (box == null) {
+        counted[2]++;
+        continue;
+      }
+      counted[0]++;
+      if ((box.left - (n.mark - n.size.width / 2)).abs() > 1e-6) {
+        counted[1]++;
+      }
+      if (box.left < canvasMargin - 1e-6 ||
+          box.right > canvas.width - canvasMargin + 1e-6) {
+        fail(stop, '"${n.text}" is not whole on the canvas at $box');
+      }
+      if (ruler) {
+        final bool over =
+            box.left - 1e-6 <= n.mark && n.mark <= box.right + 1e-6;
+        final bool beside =
+            (box.left - n.mark).abs() <= canvasMargin + 1e-6 ||
+            (n.mark - box.right).abs() <= canvasMargin + 1e-6;
+        if (!over && !beside) {
+          fail(stop, '"${n.text}" is not over its tick at ${n.mark}: $box');
+        }
+        if (previous != null && box.left - previous.right < numberGap - 1e-6) {
+          fail(stop, '"${n.text}" touches the number before it');
+        }
+        previous = box;
+      }
+    }
+  }
+
+  for (final (ZoomScene scene, ZoomFrame frame) in stage.frames(
+    stage.depth.depthOf(ZoomStop.band),
+    canvas,
+    inks,
+    labels: labels,
+  )) {
+    if (scene is BandScene) {
+      check('band', scene.rulerNumbers(frame), ruler: true);
+    }
+  }
+  for (final (ZoomScene scene, ZoomFrame frame) in stage.frames(
+    stage.depth.depthOf(ZoomStop.gene),
+    canvas,
+    inks,
+    labels: labels,
+  )) {
+    if (scene is GeneScene && scene.annotationsShown(frame) > 0) {
+      check('gene', scene.rulerNumbers(frame), ruler: true);
+      check('gene', scene.exonNumbers(frame), ruler: false);
     }
   }
 }
