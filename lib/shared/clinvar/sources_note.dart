@@ -137,7 +137,10 @@ class SourcesNote extends StatelessWidget {
               'the top 10% of SNVs, 20 the top 1% and 30 the top 0.1%. It '
               'integrates splicing, expression, chromatin, conservation and '
               'coding predictions, AlphaMissense among them, so on a missense '
-              'change it overlaps ESM rather than confirming it.',
+              'change it overlaps ESM rather than confirming it. AVI values '
+              'are provided under and subject to the AlphaGenome Output Terms '
+              'of Use; here they are rounded, ranked and summarised over '
+              'regions.',
         ),
         paragraph(
           'AVI contributions',

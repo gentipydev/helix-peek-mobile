@@ -46,6 +46,31 @@ void main() {
     expect(find.byType(InkWell), findsNothing);
   });
 
+  testWidgets('AVI carries the notice AlphaGenome’s output terms ask for', (
+    WidgetTester tester,
+  ) async {
+    await _pump(tester, const SourcesNote(snapshotDate: '2026-09-22'));
+
+    // The terms' notice, and what was done to the values here, wherever AVI
+    // values show: "About these sources" is where the walk says what each
+    // source is.
+    final Finder notice = find.textContaining(
+      'AVI values are provided under and subject to the AlphaGenome Output '
+      'Terms of Use; here they are rounded, ranked and summarised over '
+      'regions.',
+      findRichText: true,
+    );
+    expect(notice, findsOneWidget);
+    // Outside ClinVar's own paragraph, the walk's copy rule holds.
+    expect(
+      find.textContaining(
+        RegExp('pathogenic|dangerous|harmful|disease|safe|diagnosis|clinical'),
+        findRichText: true,
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('a gene with no snapshot still says so the way it did', (
     WidgetTester tester,
   ) async {
