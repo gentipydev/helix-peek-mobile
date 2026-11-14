@@ -1439,6 +1439,17 @@ curated stay schema 2, and v3 gives every one of them the path it has. Seven
 proteins the Atlas cannot place have their locus `refused`, so their gene
 page offers no zoom.
 
+The Atlas stays 25.1, the user's decision of 2026-11-14, although its site
+now serves 26.0. Under 26.0, 3,480 of 7,108 offered proteins' paths would
+change, 2,604 of them to another organ, with eight curated zooms among them.
+Nearly all of it is one change: 26.0 reprocessed its single-cell data and
+drops "Cell type enhanced" for two thirds of the genes 25.1 gives it. A gene
+specific to no tissue takes its organ from that cell type's home, so its
+organ moves. No gene the Atlas calls specific to a tissue in both releases
+changes organ. The move would mostly swap one weak destination for another.
+The backend's `pipeline/locus/README.md`, "Atlas 26.0 is its own project",
+has the numbers, what is not known, when to revisit and how to move.
+
 ## Built on demand
 
 Every protein the search offers to build opens the zoom from its gene page,
