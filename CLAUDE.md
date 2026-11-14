@@ -1095,6 +1095,14 @@ Drawn bases are **not contiguous**, and code that assumes they are breaks:
   can't recover real lengths (42 of dystrophin's 78 introns sit at the floor).
 - A ClinVar record in a cut middle is "not drawn", not "outside the gene"
   (R9.2). `AnatomyFasta` refuses to copy a shortened gene's letters.
+- A shortened intron drawn in `d` cells keeps its first `d ~/ 2` bases from
+  the donor, in transcript order, and the rest up to the acceptor (the
+  record builder's `compress`). Its bases are named along the real intron
+  (`StageRun.realBaseAt`): the region page's ruler from its first base, so
+  its numbers jump at the cut, and the base sheet in HGVS from the nearer
+  exon (`AnatomyAddress.intronicOf`, `c.53+1` … `c.54−1`). Both are held to
+  AVI's chromosome map and ClinVar's own names
+  (`test/shared/anatomy/intron_numbering_test.dart`).
 
 ## Commands
 

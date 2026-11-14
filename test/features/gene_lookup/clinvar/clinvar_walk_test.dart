@@ -337,7 +337,8 @@ void main() {
       find.byType(ImpactPanel),
     );
     expect(sheet.impact.position, 6167);
-    expect(sheet.address, contains('intron'));
+    expect(sheet.address, 'c.188−31');
+    expect(sheet.region, 'intron 2');
     await _capture(tester, 'walk-intron-base');
   });
 

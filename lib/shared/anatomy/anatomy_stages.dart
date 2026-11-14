@@ -233,6 +233,20 @@ final class StageRun {
   /// Whether this run is a region of the gene rather than punctuation.
   bool get isRegion => lengthBp >= regionFloor;
 
+  /// Which base of the feature the cell [within] cells into this run is,
+  /// counted from 1 along the real molecule.
+  ///
+  /// The cells are the bases everywhere but a shortened intron, which is
+  /// drawn as its first `count ~/ 2` bases, from the donor, and its last
+  /// ones, up to the acceptor: the record builder's `compress` keeps both
+  /// ends of it and drops its middle. Past the cut, a cell is that many
+  /// bases short of the real end, so dystrophin's first intron, drawn in 758
+  /// cells, ends on its base 191,081.
+  int realBaseAt(int within) =>
+      kind == RoleKind.intron && lengthBp > count && within >= count ~/ 2
+      ? within + 1 + lengthBp - count
+      : within + 1;
+
   /// The name as it may be *written on* the run, longest to shortest.
   ///
   /// [labelForms] is the name in a sentence, and a sentence has room. A shape

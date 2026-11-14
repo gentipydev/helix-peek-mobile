@@ -11,7 +11,9 @@ import 'anatomy_stages.dart';
 ///   3′ UTR after the stop (*1 …);
 /// - a precursor from its initiator methionine;
 /// - each released chain from its own first residue;
-/// - a region opened into its DNA from its own first base.
+/// - a region opened into its DNA from its own first base, along the real
+///   molecule: a shortened intron's numbers jump where its middle was cut,
+///   and end on its real length (`StageRun.realBaseAt`).
 ///
 /// Pure, so the layout can reserve a gutter as wide as the widest label without
 /// holding a font metric: the ruler is set in a monospace face, where a label's
@@ -45,10 +47,17 @@ abstract final class AnatomyRuler {
       StageKind.gene => null,
       StageKind.mrna => _transcript(stage, cell),
       StageKind.maturePeptides => '${cell - block.start + 1}',
-      StageKind.protein ||
-      StageKind.proprotein ||
-      StageKind.dna => '${cell + 1}',
+      StageKind.protein || StageKind.proprotein => '${cell + 1}',
+      StageKind.dna => '${regionBase(stage, cell)}',
     };
+  }
+
+  /// The base of its region that a region page's [cell] is, from 1: the
+  /// ruler's number, and the one a sheet names the base by where it has no
+  /// coding-DNA name.
+  static int regionBase(AnatomyStage stage, int cell) {
+    final StageRun run = stage.runAt(cell);
+    return run.realBaseAt(cell - run.start);
   }
 
   static String _transcript(AnatomyStage stage, int cell) {
@@ -91,6 +100,9 @@ abstract final class AnatomyRuler {
       return stage.blocks
           .map((StageBlock b) => digits(b.count))
           .fold(1, (int a, int b) => a > b ? a : b);
+    }
+    if (stage.kind == StageKind.dna && stage.count > 0) {
+      return digits(regionBase(stage, stage.count - 1));
     }
     return digits(stage.count);
   }

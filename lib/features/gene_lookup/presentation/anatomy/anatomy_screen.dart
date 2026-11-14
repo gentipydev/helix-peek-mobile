@@ -198,9 +198,12 @@ class _AnatomyScreenState extends State<AnatomyScreen>
     final String base = stage.letters[cell];
     final String? c = address.cOf(position);
     final int? exon = address.exonOf(position);
+    final String? intronic = c == null ? address.intronicOf(position) : null;
     final String line = c != null
         ? '$c · $base${exon == null ? '' : ' · exon $exon'}'
-        : '${selection.stage.label} base ${grouped(cell + 1)} · $base';
+        : intronic != null
+        ? '$intronic · $base · ${selection.stage.label}'
+        : '${_regionBase(stage, cell)} · $base';
     final int? codon = address.codonOf(position);
     final int? residue = codon == null ? null : address.residueOfCodon(codon);
     return TracerStatus(
@@ -1130,12 +1133,18 @@ class _AnatomyScreenState extends State<AnatomyScreen>
         return _basePanel(
           selection.stage.positionAt(cell),
           pin,
-          '${selection.stage.label} base ${grouped(cell + 1)}',
+          _regionBase(selection.stage, cell),
         );
       }
     }
     return null;
   }
+
+  /// A region page's base named by its place in the region, as its ruler
+  /// numbers it: along the real molecule, so a shortened intron's base past
+  /// the cut is named by where it really is.
+  String _regionBase(AnatomyStage stage, int cell) =>
+      '${stage.label} base ${grouped(AnatomyRuler.regionBase(stage, cell))}';
 
   /// The base inspector for a record position, with everything the page already
   /// knows how to say about that position filled in.
@@ -1227,7 +1236,7 @@ class _AnatomyScreenState extends State<AnatomyScreen>
             evidence?.constraint != null
         ? '$place · ${evidence!.constraint!.level.label}'
         : place;
-    final String where = c ?? fallback;
+    final String where = c ?? address.intronicOf(position) ?? fallback;
     final GeneImpact? explained = impact.matchesRecord(widget.record)
         ? impact
         : null;

@@ -179,6 +179,42 @@ final class AnatomyAddress {
     return '$sites · phase ${upstream % 3}';
   }
 
+  /// An intronic base's place in the coding-DNA reference, `c.53+1` or
+  /// `c.54−1`, or null for a base outside an intron or a transcript with no
+  /// reading frame.
+  ///
+  /// Counted from the nearer exon along the real intron, as HGVS writes it:
+  /// the first half after the exon before it, the middle base of an odd
+  /// intron included, and the second half back from the exon after it. A
+  /// shortened intron is counted at its real length, so the last base drawn
+  /// of CFTR's first is `c.54−1`, its 24,105th.
+  String? intronicOf(int position) {
+    final Role? intron = model.transcriptRoleAt(position);
+    if (!coding || intron == null || intron.kind != RoleKind.intron) {
+      return null;
+    }
+    final AnatomyStage gene = model.stages.first;
+    final StageRun? run = _runOf(intron);
+    final int cell = gene.cellAt(position);
+    if (run == null ||
+        cell < run.start ||
+        cell >= run.start + run.count ||
+        run.start == 0 ||
+        run.start + run.count >= gene.count) {
+      return null;
+    }
+    final String? before = cOf(gene.positionAt(run.start - 1));
+    final String? after = cOf(gene.positionAt(run.start + run.count));
+    if (before == null || after == null) {
+      return null;
+    }
+    final int real = run.lengthBp;
+    final int base = run.realBaseAt(cell - run.start);
+    return base <= (real + 1) ~/ 2
+        ? '$before+${grouped(base)}'
+        : '$after−${grouped(real - base + 1)}';
+  }
+
   /// The coding stretch an exon carries, `CDS c.1–150`, or what it holds
   /// instead.
   String? exonFacts(int exon) {
