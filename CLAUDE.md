@@ -28,21 +28,25 @@ Two things are frozen. The code is not.
 layer, and the walk and the new flow both import it from there. Duplicate only
 when the extraction cannot be done without changing behaviour, and say so.
 
-**Every session proves itself** with a zero render baseline diff and a green
-suite. Done means all of these:
+**Every session proves itself** with a green suite and the walk's guard. Done
+means all of these:
 - `flutter analyze` and `flutter test` green with **no walk test edited**. A
   walk test that had to change means behaviour changed: stop and say which.
-- The render baseline diffs to zero. Never regenerate it to make a session pass.
 - `git diff -M --stat` shows moved files as renames, not rewrites.
 
+There is no render baseline: the goldens were removed at the user's word on
+2026-11-14. What the walk draws is held by its tests, which read its internals,
+and by looking. A change meant to leave the walk's look alone is checked on the
+simulator: shots before and after, compared pixel for pixel.
+
 **An edited walk test is a failure, not a fix.** A walk test is any test
-committed before the session began under `test/features/gene_lookup/`,
-`test/core/` or `test/goldens/`, along with the `test/support/` helpers and
+committed before the session began under `test/features/gene_lookup/` or
+`test/core/`, along with the `test/support/` helpers and
 `test/fixtures/` files those tests read. A session may change exactly one thing in them: an `import`
 line that follows a file the session moved. Anything else is an edit: an
 expectation, finder, key, type name, pump duration, surface size, text scale or
-fixture; a loosened matcher; a `skip`; a deleted test; and a regenerated
-golden (`test/goldens/**/*.png`). If a refactor needs any of these, it has changed
+fixture; a loosened matcher; a `skip`; and a deleted test. If a refactor needs
+any of these, it has changed
 behaviour. Revert the step, name the test and the assertion that failed, and
 say what the walk now does differently. Walk behaviour changes only when the
 user asks for it by name. The tests read internals (`AnatomyPainter`'s `scene`,
@@ -52,18 +56,14 @@ rule too: list it for its own session and make the test edit there, with the
 user's approval. Adding a test is always allowed. So is adding a curated
 protein to `test/fixtures/`: its files, and its row in `catalog.json`, after
 the rows already there (the curated list grows, the user's decision of
-2026-10-17); the walk's tests then run on it too, and a new protein's golden
-pages are added PNGs. Before committing,
-`git diff -M -U0 --diff-filter=MRD <start> -- test/features/gene_lookup test/core test/support test/goldens | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) |^[+-]import '`
-must print nothing, and `python3 tool/fixtures_added_only.py <start>` and
-`git diff --quiet --diff-filter=MRD <start> -- 'test/goldens/**/*.png'` must
-exit 0 (the first command cannot see a PNG change: git prints "Binary files
-differ" for it, with no `+` or `-` line), where `<start>` is the commit the
-session began from. `tool/walk_guard.sh <start>` runs all three. CI runs it on
-every push too (`.github/workflows/ci.yml`, job `walk-guard`, from the commit
-before the push); a commit whose message carries the trailer
-`Walk-change: approved` passes it, and is for a walk change the user asked for
-by name, or the goldens it regenerates.
+2026-10-17); the walk's tests then run on it too. Before committing,
+`git diff -M -U0 --diff-filter=MRD <start> -- test/features/gene_lookup test/core test/support | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) |^[+-]import '`
+must print nothing and `python3 tool/fixtures_added_only.py <start>` must exit
+0, where `<start>` is the commit the session began from.
+`tool/walk_guard.sh <start>` runs both. CI runs it on every push too
+(`.github/workflows/ci.yml`, job `walk-guard`, from the commit before the
+push); a commit whose message carries the trailer `Walk-change: approved`
+passes it, and is for a walk change the user asked for by name.
 
 Git: commit the session's own changes locally. Never push, in any form.
 
@@ -1129,25 +1129,14 @@ dart run build_runner build    # after editing gene_record_dto.dart
   test test/peptide_lm_info_shots_check.dart` plays each stage to its end on the
   real page, taps its ⓘ and writes the sheet as PNGs, scrolled and not, with how
   far it scrolls (`STEP` picks a checkpoint).
-- `SHOT_DIR=<dir> flutter test test/goldens` writes PNGs (the catalog walk,
-  ClinVar, constraint and impact tests do too). Also:
+- `SHOT_DIR=<dir> flutter test test/features/gene_lookup` writes PNGs (the
+  catalog walk, ClinVar, constraint and impact tests). Also:
   `TRANSLATION_SHOT_DIR`, `SELECTION_SHOT_DIR`, `HELIX_OUT`, `HELIX_MOTION=1`.
 
-**Render baseline: `tool/goldens/goldens.sh`** (Git Bash, with Docker running).
-It runs `flutter test` in the one environment the goldens are made and checked
-in: `tool/goldens/Dockerfile`, Ubuntu 24.04 pinned by digest, Flutter 3.47.5,
-x86-64. The zero-diff proof is `tool/goldens/goldens.sh test/goldens`, which
-CI runs on every push (`goldens.yml`); the rest of the suite runs natively in
-`ci.yml` (`flutter analyze` and `flutter test` on Flutter 3.47.3), and
-`tool/goldens/goldens.sh` alone runs the whole suite in the container. A native
-`flutter test` skips every golden test with that reason, because text is
-rasterised by the host and a native Windows run differs at every glyph edge.
-A failed golden leaves its diff in `test/goldens/failures/`. Regenerating is
-session 99's job alone: `docs/goldens.md` has the environment, the commands
-and the rules, and the `update goldens` workflow, which regenerates named tests
-on GitHub's x86-64 runner and proposes the PNGs as a pull request.
+**CI** (`.github/workflows/ci.yml`) runs `flutter analyze`, `flutter test`
+(Flutter 3.47.3) and the walk's guard on every push and pull request.
 
 Natively on Windows, `protein_catalog_test.dart`'s "every track is fetched,
 and none of them ships" fails before any session touches it: it compares
 `File.path` against `/`-separated literals, and Windows lists
-`assets\animations\process.json`. It passes in the container.
+`assets\animations\process.json`. It passes on macOS and on Linux (CI).

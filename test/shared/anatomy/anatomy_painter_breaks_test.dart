@@ -19,8 +19,9 @@ import 'package:helixpeek/shared/anatomy/anatomy_stages.dart';
 /// has to prove is that leaving it out draws exactly what the walk drew
 /// before, and that passing it draws something more.
 ///
-/// The render baseline is the other half of this proof: those 32 goldens are
-/// drawn by this painter with `breaks` left out, and they diff to zero.
+/// Until 2026-11-14 the goldens, drawn by this painter with `breaks` left
+/// out, were the other half of this proof; they were removed, and this test
+/// is all of it.
 const Size _canvas = Size(390, 900);
 
 GeneRecord _insulin() => GeneRecordDto.fromJson(

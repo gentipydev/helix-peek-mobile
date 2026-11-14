@@ -24,7 +24,7 @@ import 'package:helixpeek/shared/helix/helix_geometry.dart';
 ///
 /// The first is the geometry, vertex for vertex. The second is everything
 /// the home screen draws from it: projection, depth order, shading and the
-/// edge fade, at many more frames than the one golden holds.
+/// edge fade, at many frames.
 ///
 /// With `HELIX_VERTICES_CAPTURE` set, and no fixture on disk, it writes the
 /// fixture instead. It refuses to overwrite one.
@@ -342,7 +342,7 @@ final class _RecordingCanvas implements Canvas {
   static String _rect(Rect r) => '${r.left} ${r.top} ${r.right} ${r.bottom}';
 
   /// The gradient the edge fade paints with cannot be read back, so its rect
-  /// and its presence are recorded; the golden holds how it looks.
+  /// and its presence are recorded; how it looks is not held here.
   static String _paint(Paint p) =>
       '${p.color.a} ${p.color.r} ${p.color.g} ${p.color.b} '
       '${p.style.name} ${p.strokeWidth} ${p.strokeCap.name} '
