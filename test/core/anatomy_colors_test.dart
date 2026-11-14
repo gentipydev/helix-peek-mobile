@@ -80,10 +80,13 @@ Color simulate(Color colour, {required bool deutan}) {
   double l = 0.31399 * r + 0.63951 * g + 0.04649 * b;
   double m = 0.15537 * r + 0.75789 * g + 0.08670 * b;
   final double s = 0.01775 * r + 0.10945 * g + 0.87262 * b;
+  // The projections for the normalised matrix above (DaltonLens's Viénot
+  // 1999). Until 2026-11-15 these were the unnormalised matrix's, which read
+  // any loss of chroma as a collapse: a rose came out bright green.
   if (deutan) {
-    m = 0.494207 * l + 1.24827 * s;
+    m = 0.9513092 * l + 0.04866992 * s;
   } else {
-    l = 2.02344 * m - 2.52581 * s;
+    l = 1.05118294 * m - 0.05116099 * s;
   }
 
   double gam(double c) {
@@ -208,9 +211,10 @@ void main() {
   // Twelve colours that must all be told apart on a near-black ground is more
   // than the eye has room for, so they were searched rather than picked: hue
   // per family, lightness per member, maximising the smallest perceptual
-  // distance across normal, deuteranopic and protanopic vision. Nudging one by
-  // hand moves it off that optimum, so the values are pinned here and a change
-  // has to be made deliberately in this file first.
+  // distance across normal, deuteranopic and protanopic vision (as [simulate]
+  // modelled them then; see the dichromat test below). Nudging one by hand
+  // moves it off that optimum, so the values are pinned here and a change has
+  // to be made deliberately in this file first.
   group('the searched palette', () {
     final Map<String, (Color, int)> pinned = <String, (Color, int)>{
       'intron': (palette.roleIntron, 0xFF212F2D),
@@ -416,16 +420,17 @@ void main() {
       }
     });
 
-    test('stay apart for a dichromat, as well as they do for the bases', () {
-      // The number the search maximised, and the bar it was held to: the four
-      // bases are 10.2 apart at their closest across normal, deuteranopic and
-      // protanopic vision, and seven colours have to manage the same. The
-      // palette this replaced managed 1.8, because its lightness happened to
-      // fall where its hues did.
-      //
-      // The spread of lightness is what buys this. A palette at one lightness
-      // collapses to about 1 for a deuteranope however far apart its hues are,
-      // which is why these are not one tidy band.
+    test('stay apart for a dichromat, though less than the bases do', () {
+      // The smallest distance across normal, deuteranopic and protanopic
+      // vision. The search held the seven as far apart as the four bases, but
+      // it measured them with projections made for another matrix than the
+      // one [simulate] uses, which read any loss of chroma as a collapse: the
+      // bases scored 10.2 there and the seven 9.3. Corrected (2026-11-15), the
+      // bases are 4.1 apart at their closest, thymine and guanine for a
+      // deuteranope, and the seven 3.5, polar and special for a protanope:
+      // closer than the bases. Both are pinned at what they are, so neither
+      // moves without this test saying so; the colours were not searched
+      // again.
       const NucleotideColors bases = NucleotideColors.dark;
       final double bar = closest(<String, Color>{
         'A': bases.adenine,
@@ -433,12 +438,12 @@ void main() {
         'G': bases.guanine,
         'C': bases.cytosine,
       }).distance;
-      expect(bar, closeTo(10.2, 0.5));
+      expect(bar, closeTo(4.12, 0.01));
 
       final ({double distance, String pair}) worst = closest(groups);
       expect(
         worst.distance,
-        greaterThanOrEqualTo(9),
+        greaterThanOrEqualTo(3.45),
         reason: '${worst.pair} are too close to tell apart',
       );
     });
@@ -446,10 +451,8 @@ void main() {
     test('stay clear of the cut sites and the name chips', () {
       // A floor rather than part of the number above, because both of these
       // carry a second signal: a cut site is outlined into its own mortar, and
-      // a chip is a pill with a word in it. Neither has to win on colour alone
-      // — and a deuteranope sees the magenta of a cut site as very nearly the
-      // grey the aliphatic field has to be, so letting that pair drive the
-      // search only ever dragged the seven groups together.
+      // a chip is a pill with a word in it. Neither has to win on colour alone.
+      // The closest pair is aromatic and a cut site, for a protanope: 6.9.
       //
       // The chips are measured as the painter actually draws them: the role
       // colour lifted off the ground, not the role colour itself.
@@ -599,10 +602,7 @@ void main() {
     });
 
     test('stays apart at a glance', () {
-      // For normal vision. [simulate] above pairs the normalised LMS matrix
-      // with the projections made for the unnormalised one, which scores any
-      // loss of chroma as a collapse, so it can only judge the searched
-      // palette it was tuned beside; correcting it is a change of its own.
+      // For normal vision; a dichromat's view is the test after this one.
       final List<String> names = groups.keys.toList();
       for (int i = 0; i < names.length; i++) {
         for (int j = i + 1; j < names.length; j++) {
@@ -630,6 +630,38 @@ void main() {
             greaterThanOrEqualTo(6),
             reason: '$name / $other',
           );
+        });
+      });
+    });
+
+    test('stays apart for a dichromat, less than the searched seven', () {
+      // The filter takes chroma away, and chroma is most of what a dichromat
+      // has left: the filtered seven sit 2.2 apart at their closest, negative
+      // and polar for a deuteranope, against 3.5 for the searched palette,
+      // and a cut site or a chip 5.8 from the nearest of them. Pinned at what
+      // they are (2026-11-15), as the searched palette's are above.
+      final ({double distance, String pair}) worst = closest(groups);
+      expect(
+        worst.distance,
+        greaterThanOrEqualTo(2.15),
+        reason: '${worst.pair} are too close to tell apart',
+      );
+      Color chip(Color role, double strength) =>
+          Color.lerp(ground, role, strength)!;
+      final Map<String, Color> others = <String, Color>{
+        'dibasic': filtered.dibasic,
+        'chip signal': chip(filtered.roleSignal, 0.16),
+        'chip proprotein': chip(filtered.roleCds, 0.34),
+        'chip B chain': chip(filtered.roleMature1, 0.34),
+        'chip C-peptide': chip(filtered.roleMature2, 0.34),
+        'chip A chain': chip(filtered.roleMature3, 0.34),
+      };
+      groups.forEach((String name, Color colour) {
+        others.forEach((String other, Color against) {
+          final ({double distance, String pair}) pair = closest(
+            <String, Color>{name: colour, other: against},
+          );
+          expect(pair.distance, greaterThanOrEqualTo(5.7), reason: pair.pair);
         });
       });
     });

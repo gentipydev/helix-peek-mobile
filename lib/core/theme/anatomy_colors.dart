@@ -90,17 +90,17 @@ import 'kaleido.dart';
 ///
 /// Within those hues, lightness and chroma were searched: they maximise the
 /// smallest perceptual distance across normal vision, deuteranopia and
-/// protanopia at once. That spread is load-bearing and is why these are not one
-/// tidy band — a palette at a single lightness collapses to ΔE00 1 for a
-/// deuteranope however far apart its hues are. These reach **9.3**, against
-/// **1.8** for the palette they replace and **10.2** for the four bases, which
-/// is the bar: seven colours separating as well as four.
+/// protanopia at once, as the palette test modelled those. Its model was
+/// wrong, the projections of another matrix, and scored these 9.3 against
+/// 10.2 for the four bases. Corrected (2026-11-15), the seven are 3.5 apart at
+/// their closest, polar and special for a protanope, and the bases 4.1: for a
+/// dichromat these separate less well than the four. They were not searched
+/// again; the test pins both numbers as they are.
 ///
 /// The cut sites and the name chips are held to a floor rather than counted in
 /// that number. Both carry a second signal — [dibasic] is outlined into its own
 /// mortar, a chip is a pill with a word in it — so neither has to win on colour
-/// alone, and a deuteranope sees magenta as very nearly the grey the aliphatic
-/// field must be.
+/// alone. The nearest pair is aromatic and a cut site, 6.9 for a protanope.
 ///
 /// [aminoUnknown] is not one of the seven — it is the fallback for a residue
 /// that is not a residue, and it is quiet on purpose.
@@ -128,8 +128,8 @@ import 'kaleido.dart';
 /// because it was argued in lightness and hue: the letter floor, the field
 /// receding and cysteine leading, the rhyme with the bases. What it spends is
 /// the chroma the search bought its distances with — the seven stay at least
-/// 14 ΔE00 apart for normal vision, and the dichromat figures above are the
-/// searched palette's, not this one's.
+/// 14 ΔE00 apart for normal vision, but 2.2 for a dichromat (negative and
+/// polar, for a deuteranope), against the searched palette's 3.5.
 ///
 /// The roles are left as they were searched. The gene page draws them, and it
 /// is not what the filter is for; a residue page only carries a role as a chip
