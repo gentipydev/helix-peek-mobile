@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_scene/scene.dart';
+import 'package:vector_math/vector_math.dart' as vm;
 
 import '../../core/catalog/protein_target.dart';
 import '../../core/catalog/protein_track.dart';
@@ -441,6 +442,33 @@ class _StructureViewState extends State<StructureView>
   PerspectiveCamera? _camera;
   bool _ready = false;
 
+  /// The model's box and how far it reaches from the axis it turns about,
+  /// which with the view's size say how far back it is framed
+  /// ([structureCamera]); and the camera last framed, for the size it was.
+  vm.Aabb3? _bounds;
+  double? _reach;
+  (Size, PerspectiveCamera)? _framed;
+
+  /// The camera for a view of [size]: [_camera] stood back as far as this
+  /// model's turn needs in a view that shape, and no further.
+  PerspectiveCamera _cameraFor(Size size) {
+    final vm.Aabb3? bounds = _bounds;
+    if (bounds == null) {
+      return _camera!;
+    }
+    final (Size, PerspectiveCamera)? framed = _framed;
+    if (framed != null && framed.$1 == size) {
+      return framed.$2;
+    }
+    final PerspectiveCamera camera = structureCamera(
+      bounds,
+      reach: _reach,
+      view: size,
+    );
+    _framed = (size, camera);
+    return camera;
+  }
+
   /// What the turn is applied to: the molecule, and the fold while it plays.
   Node? _root;
 
@@ -664,10 +692,15 @@ class _StructureViewState extends State<StructureView>
         )..addListener(_played);
       }
 
+      final vm.Aabb3? bounds = molecule.combinedWorldBounds;
+      final double? reach = bounds == null ? null : structureReach(molecule);
       setState(() {
         _scene = scene;
         _root = root;
         _camera = camera;
+        _bounds = bounds;
+        _reach = reach;
+        _framed = null;
         _morph = morph;
         _step = morph == null ? null : FoldStep.collapse;
         _ready = true;
@@ -799,13 +832,16 @@ class _StructureViewState extends State<StructureView>
                   // Ungated on purpose: `_load` has already warmed the
                   // pipelines, so the view can draw on its first frame. Gating
                   // it again would put a restarted pulse back in between.
-                  child: StructureSceneView(
-                    scene: _scene!,
-                    camera: _camera!,
-                    layerMask: () => _morph == null
-                        ? StructureSceneView.modelLayer
-                        : StructureSceneView.foldLayer,
-                    onTick: _tick,
+                  child: LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints box) =>
+                        StructureSceneView(
+                          scene: _scene!,
+                          camera: _cameraFor(box.biggest),
+                          layerMask: () => _morph == null
+                              ? StructureSceneView.modelLayer
+                              : StructureSceneView.foldLayer,
+                          onTick: _tick,
+                        ),
                   ),
                 ),
                 if (widget.legend.length > 1)

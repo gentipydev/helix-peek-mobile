@@ -29,13 +29,95 @@ import '../folding/fold_skin.dart';
 /// of the sides.
 const double structureFramingMargin = 1.35;
 
+/// The most of the view's half-width a model may reach as it turns.
+///
+/// [structureFramingMargin] fits the model to the view's height, and a phone's
+/// view is about half as wide as it is tall, so a long model swung side-on
+/// reached past both edges. On an iPhone 17 Pro Max's fold page (440 × 760)
+/// vasopressin reached 116% of the half-width and oxytocin 115%, and ten more
+/// of the 54 curated passed 95% (measured 2026-11-15). Those fourteen are
+/// drawn just far enough back to stay inside it, vasopressin at 83% of its
+/// old size and PAPPA at 98%; the other forty are framed exactly as before.
+const double structureSideShare = 0.95;
+
 /// The camera the fold page frames a model with, given the model's bounds.
 ///
 /// Named so that anything drawn in the model's own frame is seen through the
 /// same lens: the lab's fold animation projects its CA trace through it, and
 /// its last frame lands where the page draws the fold.
-PerspectiveCamera structureCamera(vm.Aabb3 bounds) =>
-    PerspectiveCamera.framing(bounds, margin: structureFramingMargin);
+///
+/// Given the model's [reach] ([structureReach]) and the [view] it is drawn
+/// in, the camera stands back as far as the turn needs and no further: a
+/// model that stays within [structureSideShare] of the sides at
+/// [structureFramingMargin] is framed exactly as before. Without them it is
+/// the height's fit alone, as it always was.
+PerspectiveCamera structureCamera(
+  vm.Aabb3 bounds, {
+  double? reach,
+  Size? view,
+}) {
+  final PerspectiveCamera fitted = PerspectiveCamera.framing(
+    bounds,
+    margin: structureFramingMargin,
+  );
+  if (reach == null ||
+      view == null ||
+      !view.isFinite ||
+      view.width <= 0 ||
+      view.height <= 0) {
+    return fitted;
+  }
+  // The turn is about the vertical axis through the origin, and the camera
+  // looks at the box's centre: a vertex that far from the axis sweeps a
+  // circle whose widest tangent from the eye, at distance d, is
+  // r / sqrt(d² - r²). Held to the share of the half-width's tangent, that
+  // is a distance of r · sqrt(1 + 1/k²).
+  final double r = reach + math.sqrt(
+    bounds.center.x * bounds.center.x + bounds.center.z * bounds.center.z,
+  );
+  final double k =
+      structureSideShare *
+      view.width /
+      view.height *
+      math.tan(fitted.fovRadiansY / 2);
+  final double needed = r * math.sqrt(1 + 1 / (k * k));
+  final double distance = (fitted.position - fitted.target).length;
+  if (needed <= distance) {
+    return fitted;
+  }
+  return PerspectiveCamera.framing(
+    bounds,
+    margin: structureFramingMargin * needed / distance,
+  );
+}
+
+/// How far the model reaches from the axis it turns about: the largest
+/// distance of any of [positions] (x, y, z triples) from the vertical axis.
+double structureReachOf(Float32List positions) {
+  double widest = 0;
+  for (int i = 0; i + 2 < positions.length; i += 3) {
+    final double x = positions[i];
+    final double z = positions[i + 2];
+    final double squared = x * x + z * z;
+    if (squared > widest) {
+      widest = squared;
+    }
+  }
+  return math.sqrt(widest);
+}
+
+/// [structureReachOf] every vertex of [molecule], in the frame it is turned
+/// in, or null where its geometry cannot be read, which leaves the camera
+/// the height's fit alone.
+double? structureReach(Node molecule) {
+  try {
+    return structureReachOf(
+      molecule.extractMeshData(transform: molecule.localTransform).positions,
+    );
+  } on StateError {
+    return null;
+  }
+}
 
 /// Loads the molecule into [scene], under [parent] where one is given, paints
 /// and frames it, and compiles what its first frame needs.
