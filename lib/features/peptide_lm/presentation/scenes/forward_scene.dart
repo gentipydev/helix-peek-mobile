@@ -552,7 +552,7 @@ final class TowerLayout {
     final double cell = (_e.right - _e.cellsLeft) / _view.trace.model.width;
     // Held to the half point below, so a number is never wider than drawn.
     final double size =
-        (math.min(9, math.min(row * 0.62, (cell - 2 * EmbeddingLayout.gap - 2) / perPoint)) * 2).floorToDouble() / 2;
+        (math.min(9, math.min(row * 0.62, (cell - 2 * EmbeddingLayout.gap - numberSlack) / perPoint)) * 2).floorToDouble() / 2;
     return size < EmbeddingLayout.leastNumber ? null : at(size);
   }
 

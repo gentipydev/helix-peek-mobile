@@ -1069,7 +1069,7 @@ final class EmbeddingLayout {
     TextStyle at(double points) => inked(view.kit.mono, points, view.inks.ink).copyWith(letterSpacing: 0);
     final double perPoint = view.kit.layout(widest, at(10)).width / 10;
     // Held to the half point below, so a number is never wider than drawn.
-    final double points = (math.min(9, math.min(pitch * 0.62, (cell - 2 * gap - 2) / perPoint)) * 2).floorToDouble() / 2;
+    final double points = (math.min(9, math.min(pitch * 0.62, (cell - 2 * gap - numberSlack) / perPoint)) * 2).floorToDouble() / 2;
     return points < leastNumber ? null : at(points);
   }
 

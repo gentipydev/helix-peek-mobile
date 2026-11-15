@@ -1614,7 +1614,7 @@ final class AttentionLayout {
   static TextStyle? shareNumbers(LmView view, double column, double pitch) {
     TextStyle at(double points) => inked(view.kit.mono, points, view.inks.ink).copyWith(letterSpacing: 0);
     final double perPoint = view.kit.layout('100', at(10)).width / 10;
-    final double room = column - 2 * EmbeddingLayout.gap - 2;
+    final double room = column - 2 * EmbeddingLayout.gap - numberSlack;
     // Held to the half point below, so a number is never wider than drawn.
     final double points = (math.min(9, math.min(pitch * 0.62, room / perPoint)) * 2).floorToDouble() / 2;
     return points < EmbeddingLayout.leastNumber ? null : at(points);

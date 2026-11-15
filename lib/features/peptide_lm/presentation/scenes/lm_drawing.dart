@@ -12,11 +12,17 @@ import 'lm_scene.dart';
 /// out once a checkpoint ([memo]): a scene paints sixty times a second, and
 /// neither a label's layout nor a layer's colour scale changes between frames.
 final class LmKit {
-  LmKit({required this.mono, required this.sans, required this.scaler, TextStyle? label})
-    : label = label ?? sans;
+  LmKit({required TextStyle mono, required this.sans, required this.scaler, TextStyle? label})
+    : mono = mono.copyWith(fontWeight: numberWeight),
+      label = label ?? sans;
 
-  /// Ids, numbers and letters.
+  /// Ids, numbers and letters, in [numberWeight].
   final TextStyle mono;
+
+  /// How heavy the canvas's ids, numbers and letters are: Medium, a touch
+  /// firmer than the Regular they are handed, so a small number on a tile
+  /// reads. The face's widths are the same at every weight.
+  static const FontWeight numberWeight = FontWeight.w500;
 
   /// Labels.
   final TextStyle sans;
@@ -422,6 +428,14 @@ void outlineToken(Canvas canvas, Rect rect, Color color, {double alpha = 1}) {
 /// How tall a tile must be to carry its id's number.
 const double idNumbered = 11;
 
+/// How much of a tile's width a number written across it leaves free, so the
+/// number is as large as the tile allows.
+const double numberSlack = 0.5;
+
+/// How much larger an id is written than [drawIdTile]'s share of its tile's
+/// height, where the tile's width allows.
+const double idGrowth = 0.5;
+
 /// A token as its id: a plain tile under a stripe of its residue's colour,
 /// the id in the accent, or in [number] where given; an end of the frame or
 /// padding in the quiet ink. The number is [numberScale] of the tile's
@@ -469,7 +483,7 @@ void drawIdTile(
   final double perPoint = view.kit.layout(widest, inked(view.kit.mono, 10, view.inks.quiet)).width / 10;
   // Held to the half point below, so the drawn number is never wider.
   final double size =
-      (math.min(math.min(tile.height * numberScale, tile.width / perPoint), 14) * 2).floorToDouble() / 2;
+      (math.min(math.min(tile.height * numberScale + idGrowth, tile.width / perPoint), 14) * 2).floorToDouble() / 2;
   if (tile.height >= idNumbered && size >= 5) {
     view.kit.draw(
       canvas,
