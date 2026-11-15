@@ -195,10 +195,12 @@ final class LineBatch {
   }
 }
 
-/// Every edge of a network's layer, (from, to, what it carries), faint, as
-/// strong as what it carries against the strongest, in the colour of its sign;
-/// or against [most], where the edges must keep one scale while what they
-/// carry changes. [alphaOf] gives the edges into one end their own share of
+/// Every edge of a network's layer, (from, to, what it carries), a fine line
+/// in the colour of its sign, as strong as what it carries against the
+/// strongest, steeply: the strongest in nearly their full colour, the
+/// weakest all but gone, so many crossing never haze into one pale web; or
+/// against [most], where the edges must keep one scale while what they carry
+/// changes. [alphaOf] gives the edges into one end their own share of
 /// [alpha], where they come one end at a time.
 void drawEdges(
   Canvas canvas,
@@ -228,8 +230,8 @@ void drawEdges(
       from(a),
       to(b),
       c >= 0 ? view.inks.positive : view.inks.negative,
-      0.5 + 1.3 * w,
-      (0.05 + 0.75 * math.pow(w, 1.4)) * alpha * share,
+      0.35 + 0.75 * w,
+      (0.03 + 0.92 * math.pow(w, 1.7)) * alpha * share,
     );
   }
   batch.draw(canvas);

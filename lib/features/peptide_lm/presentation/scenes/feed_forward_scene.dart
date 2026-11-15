@@ -314,20 +314,24 @@ final class FeedForwardScene extends LmScene {
       for (int d = 0; d < width; d++)
         for (int u = 0; u < ff; u++) (u, d, neurons[u] * trace.ffOut(view.checkpoint, block, d, u)),
     ];
-    // While one neuron is worked out, its 16 edges stand out of the rest.
+    // While one neuron is worked out, its 16 edges alone stay; the rest come
+    // back for every neuron at once, and go as the outputs' edges come.
     final (int first, int second) = worked(view);
     final double one = _span(beat, _first) * (1 - _span(beat, _second));
     final double two = _span(beat, _second) * (1 - _span(beat, _all));
     double picked(int u) => u == first ? one : (u == second ? two : 0);
-    if (hiddenIn > 0) {
+    // (The outputs' edges' own arrival, not their fade with the network:
+    // as the network goes, these must not come back.)
+    final double inShown = hiddenIn * (1 - _span(beat, _outIn));
+    if (inShown > 0) {
       drawEdges(
         canvas,
         view,
         inEdges,
         layout.inputAt,
         layout.hiddenAt,
-        hiddenIn,
-        alphaOf: (int u) => 1 - 0.85 * (one + two) + 0.85 * picked(u),
+        inShown,
+        alphaOf: (int u) => 1 - (one + two) + picked(u),
       );
     }
     if (outIn > 0) {

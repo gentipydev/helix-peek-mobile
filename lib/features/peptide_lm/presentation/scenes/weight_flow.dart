@@ -40,8 +40,9 @@ final class WeightFlow {
   static const double fanLong = 0.25;
 
   /// How strong the strings left behind are drawn once they have landed:
-  /// faint, under the strings the row lights.
-  static const double webStrength = 0.5;
+  /// clear, in their weights' colours, yet under the strings the row lights,
+  /// which are thicker.
+  static const double webStrength = 0.85;
 
   static const double _relax = 0.2;
 

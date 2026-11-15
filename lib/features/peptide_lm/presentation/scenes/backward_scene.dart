@@ -81,7 +81,9 @@ final class BackwardScene extends LmScene {
   static const WeightFlow _flow = WeightFlow(
     alone: <(double, double)>[(19.2, 20.4)],
     cascade: (22.2, 23.6),
-    webOut: (26.5, 26.9),
+    // Once the gradient is made the strings have done their work: they go
+    // before it is read.
+    webOut: (24.0, 24.4),
     firstRelax: 0.6,
   );
   static const (double, double) _worked = (20.2, 20.6);

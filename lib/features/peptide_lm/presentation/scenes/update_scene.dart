@@ -632,9 +632,9 @@ final class UpdateScene extends LmScene {
     _product(canvas, view, layout, beat, words);
   }
 
-  /// The output layer's strings, a weight each, faint in its weight's colour;
-  /// dimmed while the worked one lights, in the loss's honey, from its start
-  /// to its end.
+  /// The output layer's strings, a weight each, in its weight's colour; gone
+  /// as the worked one lights, in the loss's honey, from its start to its
+  /// end, the one string left.
   void _strings(Canvas canvas, LmView view, UpdateLayout layout, double beat, double alpha) {
     final TrainingTrace trace = view.trace;
     final PredictLayout bench = layout.bench;
@@ -650,7 +650,7 @@ final class UpdateScene extends LmScene {
       ],
       (int d) => bench.inputTile(d).centerRight,
       (int token) => bench.logitTile(token, 0).centerLeft,
-      alpha * WeightFlow.webStrength * (1 - 0.6 * _span(beat, _dim)),
+      alpha * WeightFlow.webStrength * (1 - _span(beat, _dim)),
       most: weightReach(count, width, weight),
     );
     final double lit = _span(beat, _lit);
