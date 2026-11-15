@@ -413,9 +413,10 @@ final class FeedForwardScene extends LmScene {
           continue;
         }
         final Offset at = layout.hiddenAt(u);
+        // Its own outline, in the accent: no second ring round it.
         canvas.drawCircle(
           at,
-          layout.hiddenRadius + 2.2,
+          layout.hiddenRadius,
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.2

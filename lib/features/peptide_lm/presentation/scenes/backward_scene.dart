@@ -75,7 +75,7 @@ final class BackwardScene extends LmScene {
   // left with empty slots for its gradient beside it; the errors run back
   // along the strings, the largest number of the gradient alone and slowly,
   // worked out beside its strings, then the rest in one cascade; then the
-  // gradient read, its most negative and most positive numbers ringed.
+  // gradient read, its most negative and most positive numbers in honey.
   static const (double, double) _columnsIn = (17.2, 17.8);
   static const double _firstFrom = 19.0;
   static const WeightFlow _flow = WeightFlow(
@@ -594,18 +594,18 @@ final class BackwardScene extends LmScene {
           view.inks.cell(g[d] / ladderScale(view)).withValues(alpha: made[d] * shown),
       ]);
     }
-    layout.frame(canvas, view, layout.gradientColumn, shown * kept);
+    // Its frame once the last number is made, so it never frames empty
+    // slots, each with an outline of its own.
+    final double lastMade = _flow.fanAt(width - 1, width).$2;
+    layout.frame(canvas, view, layout.gradientColumn, shown * kept * through(beat, lastMade + 0.1, lastMade + 0.35));
     // Read: the number that should rise most and the one that should fall
-    // most, ringed in the loss's honey.
-    final double read = through(beat, _readFrom, _readFrom + 0.3) * shown;
-    if (read > 0) {
-      final (int low, int high) = extremes(view);
-      for (final int d in <int>{low, high}) {
-        if (signedNumber(g[d]) != '0.00') {
-          layout.ring(canvas, view, layout.gradientTile(d), read);
-        }
-      }
-    }
+    // most, written in the loss's honey (no ring inside the column's frame).
+    final double read = (through(beat, _readFrom, _readFrom + 0.3) * 8).round() / 8;
+    final (int low, int high) = extremes(view);
+    final Set<int> marked = <int>{
+      for (final int d in <int>{low, high})
+        if (signedNumber(g[d]) != '0.00') d,
+    };
     drawColumnNumbers(
       canvas,
       view,
@@ -616,6 +616,7 @@ final class BackwardScene extends LmScene {
       writes: bench.writes,
       left: true,
       alphaOf: (int d) => _flow.written(rank[d], width, beat),
+      inkOf: (int d) => read > 0 && marked.contains(d) ? Color.lerp(view.inks.ink, view.inks.error, read) : null,
     );
     drawColumnTitle(canvas, view, gradientTitle, shown, x: layout.gradientX, top: bench.benchTop);
 
@@ -893,9 +894,11 @@ final class BackwardScene extends LmScene {
         layout.frame(canvas, view, at, 1);
       }
       // At each +, one number worked out while the part holds: the row under
-      // it plus what the part sends back makes the row above, its three
-      // tiles ringed; through the final LayerNorm, what the norm divides by.
+      // it plus what the part sends back makes the row above, that number
+      // written in the loss's honey in both rows (no ring inside a row's
+      // frame); through the final LayerNorm, what the norm divides by.
       final int d = firstMade(view);
+      final List<double> honey = List<double>.filled(points, 0);
       for (int k = 0; k < last; k++) {
         final (double t, double p) = _rise(k, points);
         final (_, double end) = _turnOf(k, points);
@@ -921,7 +924,7 @@ final class BackwardScene extends LmScene {
         final double sent = _parse(above) - _parse(below);
         final String added = sent < 0 ? '− ${fixed(-sent, 2)}' : '+ ${fixed(sent, 2)}';
         // Beside the part's name where it fits; without "number" where only
-        // that fits, the ringed tiles saying which; else not at all.
+        // that fits, the honey numbers saying which; else not at all.
         final double named = tower.labelAt(k + 1).dx +
             view.kit.layout(partName(k + 1, layers), inked(view.kit.sans, 9, view.inks.quiet)).width +
             12;
@@ -933,10 +936,8 @@ final class BackwardScene extends LmScene {
         if (text.isNotEmpty) {
           view.kit.draw(canvas, text, face, Offset(right, labelY), anchor: const Offset(1, 0));
         }
-        for (final Rect row in <Rect>[tower.slot(k + 1), tower.strip(k + 1), tower.slot(k)]) {
-          final double w = row.width / view.trace.model.width;
-          layout.ring(canvas, view, Rect.fromLTWH(row.left + d * w, row.top, w, row.height), sum);
-        }
+        honey[k] = math.max(honey[k], sum);
+        honey[k + 1] = math.max(honey[k + 1], sum);
       }
       // Each row once landed, its numbers written; x0's goes home with the
       // table, so it is drawn there.
@@ -946,7 +947,15 @@ final class BackwardScene extends LmScene {
           continue;
         }
         table.drawRow(canvas, tower.slot(k), rungs[k], scale: scale, fill: landed, text: 0);
-        tower.writeIn(canvas, tower.slot(k), rungs[k], _written(k, points, beat), style);
+        final double lit = (honey[k] * 8).round() / 8;
+        tower.writeIn(
+          canvas,
+          tower.slot(k),
+          rungs[k],
+          _written(k, points, beat),
+          style,
+          inkOf: lit > 0 ? (int i) => i == d ? Color.lerp(view.inks.ink, view.inks.error, lit) : null : null,
+        );
         layout.frame(canvas, view, tower.slot(k), landed);
       }
     });
@@ -993,7 +1002,9 @@ final class BackwardScene extends LmScene {
     } else {
       layout.tower.writeIn(canvas, at, own, (1 - home) * fade.table, layout.ladderStyle);
     }
-    layout.frame(canvas, view, at, (1 - home) * fade.table);
+    // Its honey frame goes in the first part of the way, before the place's
+    // green outline comes round the row it lands on.
+    layout.frame(canvas, view, at, (1 - through(home, 0, 0.4)) * fade.table);
     table.outline(canvas, view.position, table.row(view.position).right, others, dx: -table.gutter);
   }
 
@@ -1443,20 +1454,6 @@ final class BackwardLayout {
     final int width = predict.width;
     final double h = (predict.benchBottom - predict.benchTop) / width;
     return Rect.fromLTWH(gradientX - predict.column / 2, predict.benchTop + d * h, predict.column, h);
-  }
-
-  /// A tile ringed in the loss's honey: one number followed.
-  void ring(Canvas canvas, LmView view, Rect tile, double alpha) {
-    if (alpha <= 0) {
-      return;
-    }
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(tile.inflate(1), const Radius.circular(2.5)),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.3
-        ..color = view.inks.error.withValues(alpha: alpha),
-    );
   }
 
   /// A gradient's frame, in the loss's honey: what flows back.

@@ -615,7 +615,8 @@ abstract final class WorkedAnswer {
     );
     final Rect slot = at.bench.tileAt(x, 0, 1);
     final double marked = _span(local, _marked);
-    drawSlots(canvas, view, (int out) => slot, emptied * marked, <double>[remade]);
+    // The empty slot is its green frame alone: no outline of its own inside.
+    drawSlots(canvas, view, (int out) => slot, emptied * marked * (1 - faint), <double>[remade]);
     if (faint * marked > 0) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(slot.inflate(1.5), const Radius.circular(2.5)),

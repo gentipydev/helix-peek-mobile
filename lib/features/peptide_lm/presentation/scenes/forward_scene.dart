@@ -560,18 +560,37 @@ final class TowerLayout {
   void write(Canvas canvas, Rect rect, List<double> numbers, double alpha) =>
       writeIn(canvas, rect, numbers, alpha, numberStyle);
 
-  /// [numbers] across [rect] in [style], [alpha] as strongly; nothing where
-  /// [style] is null, too small to write in.
-  void writeIn(Canvas canvas, Rect rect, List<double> numbers, double alpha, TextStyle? style) {
+  /// [numbers] across [rect] in [style], [alpha] as strongly, each in the
+  /// ink [inkOf] names for it where it names one; nothing where [style] is
+  /// null, too small to write in.
+  void writeIn(
+    Canvas canvas,
+    Rect rect,
+    List<double> numbers,
+    double alpha,
+    TextStyle? style, {
+    Color? Function(int d)? inkOf,
+  }) {
     if (style == null || alpha <= 0) {
       return;
     }
-    _e.write(
-      canvas,
-      rect,
-      <String>[for (final double v in numbers) fixed(v, EmbeddingLayout.digits)],
-      alpha >= 1 ? style : style.copyWith(color: style.color!.withValues(alpha: (alpha * 8).round() / 8)),
-    );
+    final TextStyle face =
+        alpha >= 1 ? style : style.copyWith(color: style.color!.withValues(alpha: (alpha * 8).round() / 8));
+    final List<String> texts = <String>[for (final double v in numbers) fixed(v, EmbeddingLayout.digits)];
+    if (inkOf == null) {
+      _e.write(canvas, rect, texts, face);
+      return;
+    }
+    final double w = rect.width / numbers.length;
+    for (int d = 0; d < numbers.length; d++) {
+      final Color? ink = inkOf(d);
+      _e.write(
+        canvas,
+        Rect.fromLTWH(rect.left + d * w, rect.top, w, rect.height),
+        <String>[texts[d]],
+        ink == null ? face : face.copyWith(color: ink.withValues(alpha: face.color!.a)),
+      );
+    }
   }
 
   /// The colour scale of the strips: what every part adds to every place,

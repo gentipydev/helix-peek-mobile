@@ -223,18 +223,27 @@ final class EmbeddingScene extends LmScene {
     if (marked <= 0 || twin == null) {
       return;
     }
+    final Paint line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = view.inks.signal.withValues(alpha: 0.8 * marked);
+    Rect around(int top, int bottom) => Rect.fromLTRB(
+      layout.label(top).left - 3,
+      layout.row(top).top,
+      layout.row(bottom).right + 1,
+      layout.row(bottom).bottom,
+    );
+    // Next to each other, the two share one edge: one box round both, the
+    // line between them drawn once, never two edges side by side.
+    if (twin.$3 == twin.$2 + 1) {
+      final Rect both = around(twin.$2, twin.$3);
+      canvas.drawRRect(RRect.fromRectAndRadius(both, const Radius.circular(3)), line);
+      final double between = layout.row(twin.$2).bottom;
+      canvas.drawLine(Offset(both.left, between), Offset(both.right, between), line);
+      return;
+    }
     for (final int i in <int>[twin.$2, twin.$3]) {
-      final Rect row = layout.row(i);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTRB(layout.label(i).left - 3, row.top, row.right + 1, row.bottom),
-          const Radius.circular(3),
-        ),
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2
-          ..color = view.inks.signal.withValues(alpha: 0.8 * marked),
-      );
+      canvas.drawRRect(RRect.fromRectAndRadius(around(i, i), const Radius.circular(3)), line);
     }
   }
 

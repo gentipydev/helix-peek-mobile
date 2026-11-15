@@ -618,8 +618,8 @@ final class AttentionScene extends LmScene {
       RRect.fromRectAndRadius(at.inflate(1), const Radius.circular(2.5)),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..color = view.inks.signal.withValues(alpha: alpha),
+        ..strokeWidth = 1.2
+        ..color = view.inks.signal.withValues(alpha: 0.85 * alpha),
     );
   }
 
