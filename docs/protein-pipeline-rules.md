@@ -654,11 +654,20 @@ absence is never called benign. All twenty genes carry a snapshot since
 2026-09-22; the state stays for a row added without one.
 
 **R9.4 The overview is an inspection, not a validation claim.** One mark per
-record at its real position: along the protein, height is the record's own AVI,
-the band under it is the residue's ESM constraint on the page's ramp, the head
-is its class; records off the protein stand on a drawing of the gene, a second
-titled panel on the same AVI scale, whose ceiling is set by every record and
-never by a filter or a zoom. The class chips choose which classes are drawn —
+record at its real position, saying two things: its height is the record's
+own AVI, its head its class. Along the protein the marks stand on a drawing of
+the precursor named by its pieces; records off the protein stand on a drawing
+of the gene, a second titled panel on the same AVI scale, whose ceiling is set
+by every record and never by a filter or a zoom. ESM constraint is not drawn
+here: ESM-2 meets ClinVar on the protein page in ESM-2 mode and on every
+residue sheet, and the band of it the marks once stood on was a third copy of
+that view (taken off at the user's ask, 2026-11-15, the page being "so
+crowded", with its key line and its ramp). The class chips key the colours;
+the plot names its dashed line, "top 1% genome-wide", at its end; how many
+records have no AVI to be drawn at is said in the headline. In the list the
+DNA panel opens folded to its title and its count, and opens from its title,
+which the list remembers; folded is not a filter, and the list keeps every
+record off the protein. The class chips choose which classes are drawn —
 none chosen is all of them, and each tap adds or takes one away — and a class
 left out is removed, marks and stems, while every mark that stays keeps its
 position and height. Zooming a panel — its − and + keys, a pinch, or a tap on
@@ -666,13 +675,18 @@ a region's name under it — changes its scale, never a position; while zoomed, 
 bar under the panel frames the window on the whole and is dragged to move
 along, and a zoomed intron drawn shortened is titled by its real length. Where
 marks are dense, stems are dropped and heads drawn smaller rather than spread
-out. A tapped mark is named under the panels, which stay where they are, on a
-card that keeps one height whatever it holds, and "Show in list ›" opens it. A
-second tap on the mark, or a tap on the plot away from every mark, lets it go;
-heads drawn over one another are stepped through first, the one on top first.
+out. A tapped mark is named on a card that rises over the foot of the screen
+only while the mark is held, over the page, which never moves (the list leaves
+room under its foot while the card is up); nothing stands there at rest (the
+user's ask, 2026-11-15: an idle "Tap a mark for its record" card took a band
+of the page for nothing). "Show in list ›" opens the record's row and lets the
+card go, and so do a second tap on the mark and a tap on the plot away from
+every mark; heads drawn over one another are stepped through first, the one on
+top first. A row opened in the list, and the records a sheet's "All ›" opens
+the list on, are ringed on the strip with no card.
 Each panel also opens on the whole screen from its
 title's full-screen key — the same panel and keys with the screen's room, the
-tapped mark named under it — turned to landscape on a phone, which the rest of
+tapped mark's card over its foot — turned to landscape on a phone, which the rest of
 the app keeps upright; × or Back returns to the list as it was left, with the
 window and mark chosen there, and "Show in list ›" to the record's row. The
 list holds what the panels draw — the classes

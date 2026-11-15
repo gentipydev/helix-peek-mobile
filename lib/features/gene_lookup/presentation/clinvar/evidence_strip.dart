@@ -13,7 +13,6 @@ import '../../../../core/evidence/variant_evidence.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/clinvar/clinvar_colors.dart';
 import '../../../../shared/clinvar/evidence_sections.dart';
-import '../../../../shared/constraint/constraint_colors.dart';
 import '../../../../shared/format.dart';
 
 /// The strip's two drawings: the protein, and the gene around it.
@@ -23,17 +22,23 @@ enum StripPanel { protein, dna }
 /// residue r running from r − 1 to r, and bases along the drawn gene, 5′ to 3′.
 typedef StripWindow = (double, double);
 
-/// The whole snapshot at once, with each source on one channel of its own.
+/// The whole snapshot at once, each mark saying two things: AVI by its
+/// height, ClinVar by its colour.
 ///
 /// Along the protein, every record with a residue is a lollipop at that
-/// residue: its height is the AVI score of its own allele, its head is its
-/// ClinVar class, and it stands on the ESM constraint of the residue, drawn on
-/// the same ramp as the protein page. Records off the protein stand on a
-/// drawing of the gene in a second panel, where there is no protein for ESM to
-/// speak for. Both panels share one AVI scale, so equal heights are equal
-/// scores. Nothing is combined: a reader sees where the classified records
-/// sit, how high AVI puts them and how constrained the ground under them is,
-/// and draws the connection themselves.
+/// residue: its height is the AVI score of its own allele and its head is its
+/// ClinVar class, on a drawing of the precursor named by its pieces. Records
+/// off the protein stand on a drawing of the gene in a second panel. Both
+/// panels share one AVI scale, so equal heights are equal scores. Nothing is
+/// combined: a reader sees where the classified records sit and how high AVI
+/// puts them, and draws the connection themselves. ESM-2 meets ClinVar on the
+/// protein page in ESM-2 mode and on every residue sheet; the band of ESM
+/// constraint this strip once stood its marks on was a third copy of that,
+/// and left at the user's ask (2026-11-15, the page "so crowded").
+///
+/// In the list the DNA panel opens folded to its title and count, and opens
+/// from its title ([dnaOpen]); folded is not a filter, and the list keeps
+/// every record off the protein.
 ///
 /// Every mark keeps its real position and height whatever is shown: the
 /// classes left out are simply not drawn, and the scale is set by every record
@@ -62,6 +67,8 @@ class EvidenceStrip extends StatefulWidget {
     this.only,
     this.onExpand,
     this.onClose,
+    this.dnaOpen = true,
+    this.onDnaOpen,
     super.key,
   });
 
@@ -110,6 +117,14 @@ class EvidenceStrip extends StatefulWidget {
 
   /// Closes the page the panel is on, from a key at the start of its title.
   final VoidCallback? onClose;
+
+  /// Whether the DNA panel is drawn past its title, where [onDnaOpen] lets
+  /// it fold: folded, it is its title and its count alone, and a tap on the
+  /// title opens it. Without [onDnaOpen] it is always open.
+  final bool dnaOpen;
+
+  /// Opens the DNA panel, or folds it, from its title.
+  final ValueChanged<bool>? onDnaOpen;
 
   /// The narrowest a panel zooms to: ten residues, twelve bases.
   static const double leastResidues = 10;
@@ -587,6 +602,24 @@ class _EvidenceStripState extends State<EvidenceStrip> {
         : _dnaTitle(window);
   }
 
+  /// What the folded DNA panel counts: the records off the protein the list
+  /// holds, of how many there are, as a region's heading counts its own.
+  String _dnaCount() {
+    int total = 0;
+    int held = 0;
+    for (final VariantEvidence e in widget.evidence) {
+      if (e.variant.residue == null) {
+        total++;
+        if (widget.draws(e)) {
+          held++;
+        }
+      }
+    }
+    return held == total
+        ? '${grouped(held)} record${held == 1 ? '' : 's'}'
+        : '${grouped(held)} of ${grouped(total)} records';
+  }
+
   @override
   Widget build(BuildContext context) {
     _cache();
@@ -657,6 +690,24 @@ class _EvidenceStripState extends State<EvidenceStrip> {
     bool keepBarRoom = false,
   }) {
     final void Function(StripPanel)? expand = widget.onExpand;
+    // The DNA panel folds in the list, and opens from its title.
+    final ValueChanged<bool>? fold =
+        panel == StripPanel.dna && widget.only == null
+        ? widget.onDnaOpen
+        : null;
+    if (fold != null && !widget.dnaOpen) {
+      return <Widget>[
+        _PanelTitle(
+          panel: panel,
+          text: _title(panel),
+          zoomable: false,
+          onExpand: expand == null ? null : () => expand(panel),
+          folded: true,
+          count: _dnaCount(),
+          onFold: () => fold(true),
+        ),
+      ];
+    }
     // The whole, with the window on it: only while there is a window, and
     // under the panel, so it moves nothing the reader was looking at when it
     // arrives.
@@ -666,7 +717,6 @@ class _EvidenceStripState extends State<EvidenceStrip> {
             panel: panel,
             whole: widget.whole(panel),
             window: _window(panel),
-            constraint: panel == StripPanel.protein ? widget.constraint : null,
             exons: <(double, double)>[
               if (panel == StripPanel.dna)
                 for (final (int a, int b) in widget.exons) widget._spanOf(a, b),
@@ -692,6 +742,8 @@ class _EvidenceStripState extends State<EvidenceStrip> {
         zoomable: widget.onWindow != null,
         onExpand: expand == null ? null : () => expand(panel),
         onClose: widget.onClose,
+        folded: fold == null ? null : false,
+        onFold: fold == null ? null : () => fold(false),
       ),
       _panel(
         context,
@@ -771,8 +823,7 @@ class _EvidenceStripState extends State<EvidenceStrip> {
           ? '$drawn ClinVar records on the ${widget.proteinLength} residues '
                 'of the protein${drawn == count ? '' : ', of the classes shown'}. '
                 'Heights are each record’s AVI score, with a dashed line at '
-                '20, the top 1% genome-wide; the band under them is ESM '
-                'constraint, and colours are ClinVar classes.'
+                '20, the top 1% genome-wide, and colours are ClinVar classes.'
           : '$drawn ClinVar records outside the protein, on the gene’s '
                 '$_dnaKinds${drawn == count ? '' : ', of the classes shown'}. '
                 'Heights are each record’s AVI score, with a dashed line at '
@@ -836,6 +887,10 @@ class _EvidenceStripState extends State<EvidenceStrip> {
                         pieces: pieces,
                         colors: theme.colorScheme,
                         labelScale: labelScale,
+                        // The first panel names its dashed line; the one
+                        // under it shares the scale and the name.
+                        nameTwenty:
+                            protein || widget.only == StripPanel.dna,
                         empty: records.list.isEmpty
                             ? (widget.classes.isEmpty
                                   ? null
@@ -1158,6 +1213,9 @@ class _PanelTitle extends StatelessWidget {
     this.onZoomOut,
     this.onExpand,
     this.onClose,
+    this.folded,
+    this.count,
+    this.onFold,
   });
 
   final StripPanel panel;
@@ -1171,6 +1229,15 @@ class _PanelTitle extends StatelessWidget {
   final VoidCallback? onZoomOut;
   final VoidCallback? onExpand;
   final VoidCallback? onClose;
+
+  /// Whether the panel is folded to this row, for a panel that folds, and
+  /// null for one that does not. The name is then the fold's own key, as a
+  /// region's heading is in the list, its chevron turned the same way.
+  final bool? folded;
+
+  /// What the folded panel holds, beside its name.
+  final String? count;
+  final VoidCallback? onFold;
 
   static const double height = 44;
 
@@ -1191,6 +1258,19 @@ class _PanelTitle extends StatelessWidget {
     final String whole = panel == StripPanel.protein
         ? 'the whole protein'
         : 'the whole gene';
+    final TextStyle? style = theme.textTheme.labelMedium?.copyWith(
+      fontFamily: AppTypography.sansFamily,
+      color: muted,
+      letterSpacing: 0,
+    );
+    final Widget name = Text(
+      text,
+      key: ValueKey<String>('evidence-title-${panel.name}'),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: style,
+    );
+    final bool? isFolded = folded;
     // One height zoomed or not, so the way out never moves the page.
     return SizedBox(
       height: height,
@@ -1205,19 +1285,52 @@ class _PanelTitle extends StatelessWidget {
               iconSize: 20,
               icon: const Icon(Icons.close_rounded),
             ),
-          Expanded(
-            child: Text(
-              text,
-              key: ValueKey<String>('evidence-title-${panel.name}'),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontFamily: AppTypography.sansFamily,
-                color: muted,
-                letterSpacing: 0,
+          if (isFolded == null)
+            Expanded(child: name)
+          else
+            Expanded(
+              child: Semantics(
+                button: true,
+                expanded: !isFolded,
+                label: isFolded && count != null ? '$text, $count' : text,
+                excludeSemantics: true,
+                child: InkWell(
+                  key: ValueKey<String>('evidence-fold-${panel.name}'),
+                  onTap: onFold,
+                  borderRadius: BorderRadius.circular(10),
+                  // The row's whole height, a finger's.
+                  child: SizedBox(
+                    height: height,
+                    child: Row(
+                      children: <Widget>[
+                        Flexible(child: name),
+                        if (isFolded && count != null)
+                          Text(
+                            ' · $count',
+                            key: ValueKey<String>(
+                              'evidence-count-${panel.name}',
+                            ),
+                            maxLines: 1,
+                            style: style,
+                          ),
+                        const SizedBox(width: 4),
+                        AnimatedRotation(
+                          turns: isFolded ? 0 : 0.5,
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : const Duration(milliseconds: 180),
+                          child: Icon(
+                            Icons.expand_more_rounded,
+                            size: 20,
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
           if (onWhole != null)
             TextButton(
               key: ValueKey<String>('evidence-whole-${panel.name}'),
@@ -1272,7 +1385,6 @@ class _WindowBar extends StatelessWidget {
     required this.window,
     required this.onMove,
     required this.onDone,
-    this.constraint,
     this.exons = const <(double, double)>[],
     super.key,
   });
@@ -1280,7 +1392,6 @@ class _WindowBar extends StatelessWidget {
   final StripPanel panel;
   final StripWindow whole;
   final StripWindow window;
-  final ProteinConstraint? constraint;
   final List<(double, double)> exons;
 
   /// The window as it moves, and when it has stopped.
@@ -1337,7 +1448,6 @@ class _WindowBar extends StatelessWidget {
                 panel: panel,
                 whole: whole,
                 window: window,
-                constraint: constraint,
                 exons: exons,
                 colors: colors,
               ),
@@ -1354,7 +1464,6 @@ class _WindowBarPainter extends CustomPainter {
     required this.panel,
     required this.whole,
     required this.window,
-    required this.constraint,
     required this.exons,
     required this.colors,
   });
@@ -1362,7 +1471,6 @@ class _WindowBarPainter extends CustomPainter {
   final StripPanel panel;
   final StripWindow whole;
   final StripWindow window;
-  final ProteinConstraint? constraint;
   final List<(double, double)> exons;
   final ColorScheme colors;
 
@@ -1374,25 +1482,15 @@ class _WindowBarPainter extends CustomPainter {
     final double length = whole.$2 - whole.$1;
     double x(double u) => left + (u - whole.$1) / length * width;
     final double middle = size.height / 2;
-    const double thickness = 8;
-    final Rect bar = Rect.fromLTRB(
-      left,
-      middle - thickness / 2,
-      right,
-      middle + thickness / 2,
-    );
     if (panel == StripPanel.protein) {
-      final ProteinConstraint? track = constraint;
-      final int residues = length.round();
-      for (int r = 1; r <= residues; r++) {
-        canvas.drawRect(
-          Rect.fromLTRB(x(r - 1.0), bar.top, x(r.toDouble()) + 0.5, bar.bottom),
-          Paint()
-            ..color = track != null && r <= track.positions.length
-                ? ConstraintColors.heat(track.positions[r - 1].conservation)
-                : colors.surfaceContainerHighest,
-        );
-      }
+      // The precursor as the panel draws it: one bar, in the quiet ink.
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTRB(left, middle - 3, right, middle + 3),
+          const Radius.circular(1.5),
+        ),
+        Paint()..color = colors.onSurfaceVariant.withValues(alpha: 0.55),
+      );
     } else {
       canvas.drawLine(
         Offset(left, middle),
@@ -1438,7 +1536,6 @@ class _WindowBarPainter extends CustomPainter {
   bool shouldRepaint(_WindowBarPainter old) =>
       old.window != window ||
       old.whole != whole ||
-      old.constraint != constraint ||
       old.colors != colors ||
       !listEquals(old.exons, exons);
 }
@@ -1519,7 +1616,8 @@ final class _Geometry {
   double get right => size.width - 8;
   double get width => math.max(1, right - left);
 
-  /// Where the ground starts: the ESM band's top, the gene's upper edge.
+  /// Where the ground starts: the upper edge of the protein and the gene,
+  /// each drawn as a bar about [geneLine], with ticks from [bandBottom].
   double get groundTop => top + plot;
   double get bandBottom => groundTop + band;
   double get geneLine => groundTop + 5;
@@ -1548,15 +1646,21 @@ class _StripPainter extends CustomPainter {
     required this.pieces,
     required this.colors,
     required this.labelScale,
+    this.nameTwenty = true,
     this.empty,
   });
 
   final StripPanel panel;
   final _Geometry geometry;
   final _MarkBatch batch;
+
+  /// The protein's pieces, which name its ground.
   final ProteinConstraint? constraint;
   final int proteinLength;
   final bool zoomed;
+
+  /// Whether the dashed line is named at its end: on the first panel drawn.
+  final bool nameTwenty;
 
   /// The gene's exons and named pieces, in the panel's coordinates.
   final List<(double, double)> exons;
@@ -1636,15 +1740,14 @@ class _StripPainter extends CustomPainter {
     final double half = _Geometry.labelSize * labelScale / 2;
 
     // The AVI axis, the same in both panels: its name at the top of the
-    // gutter, the ceiling under it, and the top-1% line, drawn dashed — the
-    // key under the strip says what the dashes are, where no mark can sit on
-    // the words. The gene panel's floor is zero; the protein's is the ESM
-    // band, named below.
+    // gutter, the ceiling under it, zero at the floor, and the top-1% line,
+    // drawn dashed and named at the plot's top right, where no mark can sit
+    // on the words: at the line's own end the marks of a dense stretch did.
     _label(canvas, 'AVI', const Offset(0, 2));
     for (final double value in <double>[
       GeneImpact.highPhred,
       g.ceiling,
-      if (panel == StripPanel.dna) 0,
+      0,
     ]) {
       _label(
         canvas,
@@ -1661,6 +1764,22 @@ class _StripPainter extends CustomPainter {
         guide,
       );
     }
+    if (nameTwenty) {
+      const String name = 'top 1% genome-wide';
+      _label(
+        canvas,
+        name,
+        Offset(g.right, 2),
+        align: TextAlign.right,
+        mono: false,
+      );
+      // A stretch of the dashes before the words, which ties them to the line.
+      final double y = 2 + _Geometry.labelSize * labelScale / 2;
+      final double end = g.right - _measure(name) - 5;
+      for (double x = end - 18; x < end; x += 6) {
+        canvas.drawLine(Offset(x, y), Offset(math.min(x + 3, end), y), guide);
+      }
+    }
     canvas.save();
     canvas.clipRect(Rect.fromLTRB(g.left, 0, g.right + 1, size.height));
     if (panel == StripPanel.protein) {
@@ -1669,9 +1788,6 @@ class _StripPainter extends CustomPainter {
       _paintGene(canvas, guide);
     }
     canvas.restore();
-    if (panel == StripPanel.protein) {
-      _label(canvas, 'ESM', Offset(0, g.groundTop));
-    }
     if (empty case final String note) {
       _label(
         canvas,
@@ -1693,26 +1809,26 @@ class _StripPainter extends CustomPainter {
     canvas.restore();
   }
 
-  /// The ground: ESM constraint per residue, on the protein page's own ramp,
-  /// and the precursor's pieces under it — or, zoomed, the residue numbers.
+  /// The ground: the precursor as one bar in the quiet ink, as the gene's
+  /// exons are drawn, and its pieces under it — or, zoomed, the residue
+  /// numbers.
   void _paintProtein(Canvas canvas, Paint guide) {
     final _Geometry g = geometry;
     final ProteinConstraint? track = constraint;
     final int first = math.max(1, g.window.$1.floor() + 1);
     final int last = math.min(proteinLength, g.window.$2.ceil());
-    for (int r = first; r <= last; r++) {
-      final double conservation = track != null && r <= track.positions.length
-          ? track.positions[r - 1].conservation
-          : 0;
-      final double from = g.x(r - 1.0);
-      canvas.drawRect(
-        Rect.fromLTRB(from, g.groundTop, g.x(r.toDouble()) + 0.5, g.bandBottom),
-        Paint()
-          ..color = track == null
-              ? colors.surfaceContainerHighest
-              : ConstraintColors.heat(conservation),
-      );
-    }
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(
+          g.x(first - 1.0),
+          g.geneLine - 3,
+          g.x(last.toDouble()),
+          g.geneLine + 3,
+        ),
+        const Radius.circular(1.5),
+      ),
+      Paint()..color = colors.onSurfaceVariant.withValues(alpha: 0.55),
+    );
     if (track == null) {
       return;
     }
@@ -1911,5 +2027,6 @@ class _StripPainter extends CustomPainter {
       old.zoomed != zoomed ||
       old.colors != colors ||
       old.labelScale != labelScale ||
+      old.nameTwenty != nameTwenty ||
       old.empty != empty;
 }

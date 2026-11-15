@@ -330,7 +330,7 @@ void main() {
           'Height: AVI of each allele · band: ESM · colour: ClinVar '
           'categorisation',
         ),
-        findsOneWidget,
+        findsNothing,
       );
       for (final (String, int) chip in <(String, int)>[
         ('pathogenic', 37),
@@ -461,7 +461,7 @@ void main() {
   testWidgets('a mark on the strip is named under it; heads drawn over one '
       'another cycle, then let go', (tester) async {
     await _overview(tester);
-    expect(find.text('Tap a mark for its record'), findsOneWidget);
+    expect(_key('evidence-readout'), findsNothing);
     await capture(tester, 'readout-idle');
     // Cys96's two heads at AVI 31.5 share the one spot. The conflicting
     // record is drawn over the one with no classification, so it is first.
@@ -483,7 +483,7 @@ void main() {
     await tester.tapAt(head);
     await tester.pumpAndSettle();
     expect(_strip(tester).selected, isEmpty);
-    expect(find.text('Tap a mark for its record'), findsOneWidget);
+    expect(_key('evidence-readout'), findsNothing);
     // And from a record, the way to its row.
     await tester.tapAt(head);
     await tester.pumpAndSettle();
@@ -517,7 +517,7 @@ void main() {
       await tester.tapAt(head);
       await tester.pumpAndSettle();
       expect(_strip(tester).selected, isEmpty, reason: label);
-      expect(find.text('Tap a mark for its record'), findsOneWidget);
+      expect(_key('evidence-readout'), findsNothing);
     }
   });
 
@@ -533,7 +533,7 @@ void main() {
     await tester.tapAt(_head(tester, StripPanel.protein, 15.5, 39));
     await tester.pumpAndSettle();
     expect(_strip(tester).selected, isEmpty);
-    expect(find.text('Tap a mark for its record'), findsOneWidget);
+    expect(_key('evidence-readout'), findsNothing);
     // A tap on the ground is still the zoom's, and keeps the selection.
     await tester.tapAt(cys96);
     await tester.pumpAndSettle();
@@ -550,16 +550,13 @@ void main() {
     testWidgets('the page under the strip stays put as marks are tapped and '
         'let go: ${size.width.round()} wide', (tester) async {
       await _overview(tester, size: size);
-      Rect key() => tester.getRect(_key('variants-key'));
-      Size readout() => tester.getSize(_key('evidence-readout'));
+      Rect key() => tester.getRect(_key('variants-section-toggle-Signal peptide@1'));
       final Rect idleKey = key();
-      final Size idle = readout();
       // The pile's first, its second, and let go.
       final Offset head = _head(tester, StripPanel.protein, 95.5, 31.5);
       for (int tap = 0; tap < 3; tap++) {
         await tester.tapAt(head);
         await tester.pumpAndSettle();
-        expect(readout(), idle);
         expect(key(), idleKey);
       }
       expect(_strip(tester).selected, isEmpty);
@@ -575,6 +572,7 @@ void main() {
       size: const Size(360, 800),
       memory: VariantsOverviewMemory()
         ..selected = const <String>{'253331'}
+        ..picked = '253331'
         ..proteinWindow = (15, 70),
     );
     expect(find.text('Protein · residues 16–70 of 110'), findsOneWidget);
@@ -641,6 +639,7 @@ void main() {
 
     // The gene's own 5′ UTR is 42 bases, a few points at this scale; a finger
     // at the left end still means it.
+    await _tapKey(tester, 'evidence-fold-dna');
     final Rect dna = tester.getRect(_key('evidence-strip-dna'));
     await tester.tapAt(Offset(dna.left + 31, dna.bottom - 8));
     await tester.pumpAndSettle();
@@ -781,6 +780,8 @@ void main() {
   ) async {
     _phone(tester);
     await _overview(tester, size: null);
+    await tester.tap(_key('evidence-fold-dna'));
+    await tester.pumpAndSettle();
     for (final StripPanel panel in StripPanel.values) {
       final Finder drawing = find.byKey(
         ValueKey<String>('evidence-strip-${panel.name}'),
@@ -802,8 +803,8 @@ void main() {
         find.byKey(ValueKey<String>('evidence-expand-${panel.name}')),
         findsNothing,
       );
-      expect(find.byKey(const ValueKey<String>('evidence-readout')), findsOneWidget);
-      expect(find.text('Tap a mark for its record'), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('evidence-readout')), findsNothing);
+      expect(find.text('Tap a mark for its record'), findsNothing);
       expect(tester.takeException(), isNull);
       await capture(tester, 'panel-page-${panel.name}');
       await _closePanel(tester, panel);
@@ -845,14 +846,20 @@ void main() {
       'there, and Show in list opens its row', (tester) async {
     _phone(tester);
     await _overview(tester, size: null);
+    final Offset inListHead = _head(tester, StripPanel.protein, 95.5, 31.5);
+    await tester.tapAt(inListHead);
+    await tester.pumpAndSettle();
     final double inList = tester.getSize(_key('evidence-readout')).height;
+    await tester.tapAt(inListHead);
+    await tester.pumpAndSettle();
+    await tester.tapAt(inListHead);
+    await tester.pumpAndSettle();
     await _openPanel(tester, StripPanel.protein);
     // The page is wide: the way to the row sits beside the record's lines
     // rather than under them, and the drawing keeps that height.
     final Finder readout = find.byKey(
       const ValueKey<String>('evidence-readout'),
     );
-    expect(tester.getSize(readout).height, lessThan(inList));
     Set<String> selected() =>
         tester.widget<EvidenceStrip>(find.byType(EvidenceStrip)).selected;
     // Cys96's two heads at AVI 31.5 share the one spot.
@@ -866,6 +873,7 @@ void main() {
     await tester.tapAt(head);
     await tester.pumpAndSettle();
     expect(selected(), <String>{'13387'});
+    expect(tester.getSize(readout).height, lessThan(inList));
     expect(find.text('1 of 2 here'), findsOneWidget);
     await capture(tester, 'panel-page-readout');
     // Past the last of the spot, the page lets go too.
@@ -874,7 +882,7 @@ void main() {
     await tester.tapAt(head);
     await tester.pumpAndSettle();
     expect(selected(), isEmpty);
-    expect(find.text('Tap a mark for its record'), findsOneWidget);
+    expect(readout, findsNothing);
     await tester.tapAt(head);
     await tester.pumpAndSettle();
     expect(selected(), <String>{'13387'});
@@ -1117,6 +1125,10 @@ void main() {
       expect(size(key).width, greaterThanOrEqualTo(32), reason: key);
       expect(size(key).height, greaterThanOrEqualTo(44), reason: key);
     }
+    _scrollOf(tester).jumpTo(0);
+    await tester.pumpAndSettle();
+    await tester.tapAt(_head(tester, StripPanel.protein, 95.5, 31.5));
+    await tester.pumpAndSettle();
     for (final String key in <String>[
       'evidence-readout-show',
       'evidence-copy-13387',

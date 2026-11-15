@@ -17,6 +17,7 @@ abstract final class ConstraintColors {
 
   // The sheets no longer colour a model's band: its meter is drawn in ink, and
   // hue there belongs to ClinVar. This ramp is for filling a protein — the
-  // grid in ESM mode and the band under the overview's strip — and nothing
-  // else, so a ClinVar mark can never be read as a step of it.
+  // grid in ESM mode — and nothing else, so a ClinVar mark can never be read
+  // as a step of it. The ClinVar overview's strip stood its marks on a band
+  // of it until 2026-11-15, when the band left at the user's ask.
 }

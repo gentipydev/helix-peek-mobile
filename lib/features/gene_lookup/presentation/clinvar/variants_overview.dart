@@ -15,7 +15,6 @@ import '../../../../shared/clinvar/clinvar_colors.dart';
 import '../../../../shared/clinvar/evidence_row.dart';
 import '../../../../shared/clinvar/evidence_sections.dart';
 import '../../../../shared/clinvar/sources_note.dart';
-import '../../../../shared/constraint/constraint_colors.dart';
 import '../../../../shared/format.dart';
 import 'evidence_strip.dart';
 
@@ -50,12 +49,18 @@ class VariantsOverviewMemory {
   Set<ClinVarGroup> classes = const <ClinVarGroup>{};
   Set<String> selected = const <String>{};
 
+  /// The mark tapped on the strip, which its card names, or null.
+  String? picked;
+
   /// The regions the reader closed, by section key.
   Set<String> collapsed = const <String>{};
 
   /// What each panel of the strip shows, or null for the whole.
   StripWindow? proteinWindow;
   StripWindow? dnaWindow;
+
+  /// Whether the DNA panel is open past its title: it opens folded.
+  bool dnaOpen = false;
 }
 
 /// Every ClinVar record of a gene, as one picture and one list.
@@ -177,7 +182,15 @@ class _VariantsOverviewState extends State<VariantsOverview> {
   /// Which of the heads drawn over one another at the last tap on the strip
   /// is the selected one, and of how many.
   (int, int)? _cycle;
+
+  /// The mark tapped on the strip, named on a card at the foot of the screen
+  /// for as long as it is held, and null otherwise: a row opened in the list,
+  /// or the records a sheet sent the list to, are ringed without a card.
+  String? _picked;
   String? _open;
+
+  /// Whether the DNA panel is open past its title.
+  bool _dnaOpen = false;
 
   /// Rows still closing. Every closed row is one height, which is what lets
   /// the list place any of thousands without building the rows above it; a
@@ -195,10 +208,12 @@ class _VariantsOverviewState extends State<VariantsOverview> {
     _collapsed = Set<String>.of(_memory.collapsed);
     _proteinWindow = _memory.proteinWindow;
     _dnaWindow = _memory.dnaWindow;
+    _dnaOpen = _memory.dnaOpen;
     if (widget.focus.isNotEmpty) {
       _focusOn(widget.focus);
     } else {
       _selected = _memory.selected;
+      _picked = _selected.contains(_memory.picked) ? _memory.picked : null;
       _open = _memory.open;
       // The page is laid out as it was left, so the offset lands on the same
       // place; clamped in case it no longer exists.
@@ -231,9 +246,15 @@ class _VariantsOverviewState extends State<VariantsOverview> {
   void _focusOn(List<String> ids) {
     _selected = ids.toSet();
     _cycle = null;
+    _picked = null;
     _openRow(ids.length == 1 ? ids.first : null);
     _collapsed = Set<String>.of(_collapsed)
       ..removeAll(<String>[for (final String id in ids) ?_sectionOf[id]]);
+    // A record off the protein is ringed on the DNA panel, which opens for
+    // it; the page is laid out afresh, so nothing moves.
+    if (ids.any((String id) => _byId[id]?.variant.residue == null)) {
+      _dnaOpen = true;
+    }
     _show(ids);
     _unzoomFor(ids);
     _remember();
@@ -323,9 +344,11 @@ class _VariantsOverviewState extends State<VariantsOverview> {
       ..open = _open
       ..classes = Set<ClinVarGroup>.of(_classes)
       ..selected = _selected
+      ..picked = _picked
       ..collapsed = Set<String>.of(_collapsed)
       ..proteinWindow = _proteinWindow
-      ..dnaWindow = _dnaWindow;
+      ..dnaWindow = _dnaWindow
+      ..dnaOpen = _dnaOpen;
   }
 
   /// Adds the classes of [ids] to those shown, where a choice of classes
@@ -499,8 +522,17 @@ class _VariantsOverviewState extends State<VariantsOverview> {
       only: only,
       onExpand: only == null ? _expand : null,
       onClose: onClose,
+      dnaOpen: _dnaOpen,
+      onDnaOpen: only == null ? _openDna : null,
     );
   }
+
+  /// Opens the DNA panel past its title, or folds it back. Folded is not a
+  /// filter: the list keeps every record off the protein either way.
+  void _openDna(bool open) => setState(() {
+    _dnaOpen = open;
+    _remember();
+  });
 
   /// Zooms out whichever panel is zoomed away from one of [ids], so a
   /// selected record's ring is always on screen.
@@ -519,22 +551,26 @@ class _VariantsOverviewState extends State<VariantsOverview> {
     }
   }
 
-  /// A mark tapped on the strip: named under it, which stays where it is —
-  /// the list is not scrolled out from under the reader's finger. Null is the
-  /// mark let go, which leaves the list as it is too.
+  /// A mark tapped on the strip: named on a card that rises over the foot of
+  /// the screen, over the page, which stays where it is — the list is not
+  /// scrolled out from under the reader's finger. Null is the mark let go,
+  /// and its card with it, which leaves the list as it is too.
   void _pick(String? id, (int, int)? cycle) {
     setState(() {
       _selected = id == null ? const <String>{} : <String>{id};
+      _picked = id;
       _cycle = cycle;
       _remember();
     });
     _drawn.value++;
   }
 
-  /// Opens [id]'s row and brings it into view.
+  /// Opens [id]'s row and brings it into view; the card that named its mark
+  /// goes, its work done.
   void _showInList(String id) {
     setState(() {
       _selected = <String>{id};
+      _picked = null;
       _openRow(id);
       _show(<String>[id]);
       _unzoomFor(<String>[id]);
@@ -550,6 +586,7 @@ class _VariantsOverviewState extends State<VariantsOverview> {
     _openRow(_open == id ? null : id);
     _selected = _open == null ? const <String>{} : <String>{_open!};
     _cycle = null;
+    _picked = null;
     if (_open case final String open) {
       _unzoomFor(<String>[open]);
     }
@@ -603,10 +640,11 @@ class _VariantsOverviewState extends State<VariantsOverview> {
     }
   }
 
-  /// [panel] on a page of its own: its keys, its drawing with the screen's
-  /// room for it, and the tapped mark named under it. What the reader does
-  /// there is this list's own state, so the list shows it once the page has
-  /// closed; "Show in list ›" closes it on the record's row.
+  /// [panel] on a page of its own: its keys, and its drawing with the whole
+  /// screen's room for it, the tapped mark named on a card that rises over
+  /// the page's foot while it is held. What the reader does there is this
+  /// list's own state, so the list shows it once the page has closed; "Show
+  /// in list ›" closes it on the record's row.
   Widget _page(
     BuildContext context,
     StripPanel panel,
@@ -622,23 +660,34 @@ class _VariantsOverviewState extends State<VariantsOverview> {
           minimum: const EdgeInsets.fromLTRB(16, 4, 16, 4),
           child: ListenableBuilder(
             listenable: _drawn,
-            builder: (BuildContext context, Widget? _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            builder: (BuildContext context, Widget? _) => Stack(
+              fit: StackFit.expand,
               children: <Widget>[
-                Expanded(child: _strip(only: panel, onClose: close)),
-                const SizedBox(height: 4),
-                _Readout(
-                  evidence: _selected.length == 1
-                      ? _byId[_selected.single]
-                      : null,
-                  selected: _selected.length,
-                  cycle: _cycle,
-                  onShow: _selected.length == 1
-                      ? () => close(_selected.single)
-                      : null,
-                ),
+                _strip(only: panel, onClose: close),
+                _card(onShow: (String id) => close(id), lift: 4),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The tapped mark's card, at the foot of whatever it is laid over, or
+  /// nothing while no mark is held. [onShow] takes the reader to the mark's
+  /// row.
+  Widget _card({required ValueChanged<String> onShow, double lift = 0}) {
+    final String? picked = _picked;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: lift),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _Readout.wide),
+          child: _PickedCard(
+            evidence: picked == null ? null : _byId[picked],
+            cycle: _cycle,
+            onShow: picked == null ? null : () => onShow(picked),
           ),
         ),
       ),
@@ -659,6 +708,9 @@ class _VariantsOverviewState extends State<VariantsOverview> {
     };
     if (_selected.isEmpty) {
       _cycle = null;
+    }
+    if (!_selected.contains(_picked)) {
+      _picked = null;
     }
     _remember();
   });
@@ -712,9 +764,13 @@ class _VariantsOverviewState extends State<VariantsOverview> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
+                            // How many have no AVI score, and so no height
+                            // to be drawn at: said here, with the count they
+                            // are part of.
                             Text(
                               '${grouped(widget.evidence.length)} single-base records · '
-                              'snapshot ${data.snapshotDate}',
+                              'snapshot ${data.snapshotDate}'
+                              '${_unscored == 0 ? '' : ' · ${grouped(_unscored)} without AVI, not drawn'}',
                               key: const ValueKey<String>('variants-headline'),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: muted,
@@ -749,30 +805,10 @@ class _VariantsOverviewState extends State<VariantsOverview> {
                                 style: theme.textTheme.bodySmall,
                               )
                             else ...<Widget>[
+                              // A mark says two things: AVI by its height,
+                              // ClinVar by its colour, which the chips above
+                              // key. The plot names its own dashed line.
                               _strip(),
-                              const SizedBox(height: 8),
-                              _Readout(
-                                evidence: _selected.length == 1
-                                    ? _byId[_selected.single]
-                                    : null,
-                                selected: _selected.length,
-                                cycle: _cycle,
-                                onShow: _selected.length == 1
-                                    ? () => _showInList(_selected.single)
-                                    : null,
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Height: AVI of each allele · band: ESM · colour: '
-                                'ClinVar categorisation',
-                                key: const ValueKey<String>('variants-key'),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: muted,
-                                  letterSpacing: 0,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              _RampKey(unscored: _unscored),
                               if (_proteinWindow != null ||
                                   _dnaWindow != null) ...<Widget>[
                                 const SizedBox(height: 12),
@@ -797,7 +833,17 @@ class _VariantsOverviewState extends State<VariantsOverview> {
                     for (final _Section section in shown)
                       ..._section(context, theme, section, side),
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                      // While a mark's card is up, room for the foot to be
+                      // scrolled clear of it.
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        0,
+                        16,
+                        32 +
+                            (_picked == null
+                                ? 0
+                                : _Readout.heightOf(context) + _cardLift),
+                      ),
                       sliver: SliverToBoxAdapter(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -853,12 +899,23 @@ class _VariantsOverviewState extends State<VariantsOverview> {
                       SequenceScrubber(controller: _scroll, minScreens: 2),
                 ),
               ),
+              // The tapped mark, named over the foot of the screen while it
+              // is held, and nothing at rest: the page under it never moves.
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 0,
+                child: _card(onShow: _showInList, lift: _cardLift),
+              ),
             ],
           ),
         ),
       ),
     );
   }
+
+  /// How far the card stands off the foot of the screen.
+  static const double _cardLift = 12;
 
   /// A section's heading, and its rows while it is open.
   List<Widget> _section(
@@ -1104,34 +1161,117 @@ String _exclusion(String reason) => switch (reason) {
   _ => reason.replaceAll('_', ' '),
 };
 
-/// The mark tapped on the strip, named under it on a card of its own: its
-/// change and AVI, what ClinVar calls it, where it is among the heads drawn
-/// over one another at that spot, and the way to its row. The strip stays
-/// where it is; "Show in list ›" is the way to the record's row, and a second
-/// tap on the mark lets it go.
-///
-/// The card is one height whatever it holds — a record, several, or none — so
-/// the page under the strip never moves when a mark is tapped or let go. Its
-/// first two lines are the list row's own; on a screen wide enough, the way
-/// to the row sits beside them rather than on a line of its own.
-class _Readout extends StatelessWidget {
-  const _Readout({
+/// The tapped mark's card, risen over the foot of the screen while the mark
+/// is held and gone as it is let go: nothing stands there at rest (the
+/// user's ask, 2026-11-15, after an idle "Tap a mark for its record" card
+/// took a band of the page for nothing). With motion it slides up and back
+/// down; with motion reduced it simply appears and goes.
+class _PickedCard extends StatefulWidget {
+  const _PickedCard({
     required this.evidence,
-    required this.selected,
     required this.cycle,
     required this.onShow,
   });
 
+  /// The record the card names, or null for no card.
   final VariantEvidence? evidence;
-
-  /// How many records are selected: one from a tap, several from a sheet's
-  /// "All ›".
-  final int selected;
   final (int, int)? cycle;
   final VoidCallback? onShow;
 
-  /// The narrowest card the way to the row fits beside the two lines on.
-  static const double _wide = 560;
+  @override
+  State<_PickedCard> createState() => _PickedCardState();
+}
+
+class _PickedCardState extends State<_PickedCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _rise = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+    reverseDuration: const Duration(milliseconds: 160),
+    value: widget.evidence == null ? 0 : 1,
+  );
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, 1.3),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _rise, curve: Curves.easeOutCubic));
+
+  /// What the card names, kept while it slides away after its mark is let
+  /// go, and its cycle and way to the row with it.
+  late VariantEvidence? _shown = widget.evidence;
+  late (int, int)? _cycle = widget.cycle;
+  late VoidCallback? _onShow = widget.onShow;
+
+  @override
+  void didUpdateWidget(_PickedCard old) {
+    super.didUpdateWidget(old);
+    final bool still = MediaQuery.disableAnimationsOf(context);
+    if (widget.evidence case final VariantEvidence e) {
+      _shown = e;
+      _cycle = widget.cycle;
+      _onShow = widget.onShow;
+      if (still) {
+        _rise.value = 1;
+      } else {
+        unawaited(_rise.forward());
+      }
+    } else if (still) {
+      _rise.value = 0;
+    } else {
+      unawaited(_rise.reverse());
+    }
+  }
+
+  @override
+  void dispose() {
+    _rise.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _rise,
+    builder: (BuildContext context, Widget? _) {
+      final VariantEvidence? e = _shown;
+      if (_rise.isDismissed || e == null) {
+        return const SizedBox.shrink();
+      }
+      return SlideTransition(
+        position: _slide,
+        child: _Readout(
+          evidence: e,
+          cycle: _cycle,
+          // Not while it goes: the mark is already let go.
+          onShow: widget.evidence == null ? null : _onShow,
+        ),
+      );
+    },
+  );
+}
+
+/// The mark tapped on the strip, named: its change and AVI, what ClinVar
+/// calls it, where it is among the heads drawn over one another at that
+/// spot, and the way to its row. The strip stays where it is; "Show in
+/// list ›" is the way to the record's row, and a second tap on the mark lets
+/// it go.
+///
+/// Its first two lines are the list row's own; on a card wide enough, the
+/// way to the row sits beside them rather than on a line of its own. It
+/// stands over the page rather than in it, so it is drawn as a surface
+/// lifted off it.
+class _Readout extends StatelessWidget {
+  const _Readout({
+    required this.evidence,
+    required this.cycle,
+    required this.onShow,
+  });
+
+  final VariantEvidence evidence;
+  final (int, int)? cycle;
+  final VoidCallback? onShow;
+
+  /// The narrowest card the way to the row fits beside the two lines on, and
+  /// the widest the card is drawn.
+  static const double wide = 560;
 
   /// The way to the row's height: a finger's.
   static const double _action = 44;
@@ -1139,223 +1279,214 @@ class _Readout extends StatelessWidget {
   /// Where the lines under the first start: past the dot and its gap.
   static const double _indent = 20;
 
+  /// The card's height at its tallest, the narrow card's: what the list
+  /// leaves under its foot while the card is up.
+  static double heightOf(BuildContext context) {
+    final (double first, double second) = EvidenceRow.lines(context);
+    return 10 + first + second + _action;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
     final Color muted = colors.onSurfaceVariant;
     final TextStyle? small = theme.textTheme.bodySmall?.copyWith(color: muted);
-    final VariantEvidence? e = evidence;
+    final VariantEvidence e = evidence;
     return Semantics(
       liveRegion: true,
       container: true,
-      // Its room is reserved rather than grown into: type turned up past this
-      // point would push the list about every time a mark is tapped.
+      // Its height is set rather than grown into: type turned up past this
+      // point would make a card that covers half the page.
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.3,
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints bounds) {
-            final bool wide = bounds.maxWidth >= _wide;
+            final bool wide = bounds.maxWidth >= _Readout.wide;
             final (double first, double second) = EvidenceRow.lines(context);
-            final Widget body;
-            if (e == null) {
-              body = Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12 + _indent),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    selected > 1
-                        ? '${grouped(selected)} records selected, opened in '
-                              'the list'
-                        : 'Tap a mark for its record',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: small,
-                  ),
+            final ClinVarVariant v = e.variant;
+            final String change = v.transcriptChange;
+            final TextStyle number = TextStyle(
+              fontFamily: AppTypography.monoFamily,
+              fontSize: 12,
+              color: colors.onSurface,
+              fontFeatures: const <FontFeature>[
+                FontFeature.tabularFigures(),
+              ],
+            );
+            // What changed, and the height it is drawn at: the row's first
+            // line, the number where the row puts its numbers.
+            final Widget head = Row(
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.only(right: _indent - 10),
+                  child: ClinVarDot(group: v.group, size: 10),
                 ),
-              );
-            } else {
-              final ClinVarVariant v = e.variant;
-              final String change = v.transcriptChange;
-              final TextStyle number = TextStyle(
-                fontFamily: AppTypography.monoFamily,
-                fontSize: 12,
-                color: colors.onSurface,
-                fontFeatures: const <FontFeature>[
-                  FontFeature.tabularFigures(),
-                ],
-              );
-              // What changed, and the height it is drawn at: the row's first
-              // line, the number where the row puts its numbers.
-              final Widget head = Row(
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(right: _indent - 10),
-                    child: ClinVarDot(group: v.group, size: 10),
-                  ),
-                  // One line, whatever the change: one too long for it is
-                  // drawn a little smaller rather than broken or cut.
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(v.shortLabel, style: theme.textTheme.titleSmall),
-                          if (change != v.shortLabel) ...<Widget>[
-                            const SizedBox(width: 8),
-                            Text(
-                              change,
-                              style: TextStyle(
-                                fontFamily: AppTypography.monoFamily,
-                                fontSize: 12,
-                                color: muted,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (e.avi case final double avi) ...<Widget>[
-                    const SizedBox(width: 12),
-                    Text.rich(
-                      TextSpan(
-                        children: <InlineSpan>[
-                          TextSpan(
-                            text: 'AVI ',
-                            style: number.copyWith(color: muted),
-                          ),
-                          TextSpan(text: avi.toStringAsFixed(1), style: number),
-                        ],
-                      ),
-                      key: const ValueKey<String>('evidence-readout-avi'),
-                    ),
-                  ],
-                ],
-              );
-              // What ClinVar calls it, whole on a line of its own.
-              final Widget classification = ClinVarSourced(
-                child: Text(
-                  v.classification,
-                  key: const ValueKey<String>('evidence-readout-class'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: small,
-                ),
-              );
-              final Widget? here = switch (cycle) {
-                (final int i, final int n) when n > 1 => Text(
-                  '$i of $n here',
-                  key: const ValueKey<String>('evidence-readout-cycle'),
-                  style: small,
-                ),
-                _ => null,
-              };
-              final Widget show = TextButton(
-                key: const ValueKey<String>('evidence-readout-show'),
-                onPressed: onShow,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(0, _action),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  // Compact would take eight points off the finger's height.
-                  visualDensity: VisualDensity.standard,
-                ),
-                child: const Text('Show in list ›'),
-              );
-              // The button's own padding is the card's at its right edge; the
-              // lines keep the rest of it, so the number above ends where the
-              // button's words do.
-              body = wide
-                  ? Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: <Widget>[
-                                SizedBox(height: first, child: head),
-                                Padding(
-                                  padding: const EdgeInsets.only(left: _indent),
-                                  child: SizedBox(
-                                    height: second,
-                                    child: Row(
-                                      children: <Widget>[
-                                        Expanded(child: classification),
-                                        if (here != null) ...<Widget>[
-                                          const SizedBox(width: 12),
-                                          here,
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                // One line, whatever the change: one too long for it is
+                // drawn a little smaller rather than broken or cut.
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(v.shortLabel, style: theme.textTheme.titleSmall),
+                        if (change != v.shortLabel) ...<Widget>[
                           const SizedBox(width: 8),
-                          show,
+                          Text(
+                            change,
+                            style: TextStyle(
+                              fontFamily: AppTypography.monoFamily,
+                              fontSize: 12,
+                              color: muted,
+                            ),
+                          ),
                         ],
-                      ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 4, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: SizedBox(height: first, child: head),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              left: _indent,
-                              right: 8,
-                            ),
-                            child: SizedBox(
-                              height: second,
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: classification,
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            height: _action,
-                            child: Row(
-                              children: <Widget>[
-                                const SizedBox(width: _indent),
-                                Expanded(
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: here,
+                      ],
+                    ),
+                  ),
+                ),
+                if (e.avi case final double avi) ...<Widget>[
+                  const SizedBox(width: 12),
+                  Text.rich(
+                    TextSpan(
+                      children: <InlineSpan>[
+                        TextSpan(
+                          text: 'AVI ',
+                          style: number.copyWith(color: muted),
+                        ),
+                        TextSpan(text: avi.toStringAsFixed(1), style: number),
+                      ],
+                    ),
+                    key: const ValueKey<String>('evidence-readout-avi'),
+                  ),
+                ],
+              ],
+            );
+            // What ClinVar calls it, whole on a line of its own.
+            final Widget classification = ClinVarSourced(
+              child: Text(
+                v.classification,
+                key: const ValueKey<String>('evidence-readout-class'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: small,
+              ),
+            );
+            final Widget? here = switch (cycle) {
+              (final int i, final int n) when n > 1 => Text(
+                '$i of $n here',
+                key: const ValueKey<String>('evidence-readout-cycle'),
+                style: small,
+              ),
+              _ => null,
+            };
+            final Widget show = TextButton(
+              key: const ValueKey<String>('evidence-readout-show'),
+              onPressed: onShow,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, _action),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                // Compact would take eight points off the finger's height.
+                visualDensity: VisualDensity.standard,
+              ),
+              child: const Text('Show in list ›'),
+            );
+            // The button's own padding is the card's at its right edge; the
+            // lines keep the rest of it, so the number above ends where the
+            // button's words do.
+            final Widget body = wide
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              SizedBox(height: first, child: head),
+                              Padding(
+                                padding: const EdgeInsets.only(left: _indent),
+                                child: SizedBox(
+                                  height: second,
+                                  child: Row(
+                                    children: <Widget>[
+                                      Expanded(child: classification),
+                                      if (here != null) ...<Widget>[
+                                        const SizedBox(width: 12),
+                                        here,
+                                      ],
+                                    ],
                                   ),
                                 ),
-                                show,
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        show,
+                      ],
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 4, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: SizedBox(height: first, child: head),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: _indent,
+                            right: 8,
+                          ),
+                          child: SizedBox(
+                            height: second,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: classification,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-            }
+                        ),
+                        SizedBox(
+                          height: _action,
+                          child: Row(
+                            children: <Widget>[
+                              const SizedBox(width: _indent),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: here,
+                                ),
+                              ),
+                              show,
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
             return SizedBox(
               key: const ValueKey<String>('evidence-readout'),
-              // Every state is this height: the record's lines and the way
-              // to its row, laid out as the width allows.
+              // The record's lines and the way to its row, laid out as the
+              // width allows.
               height: wide
                   ? math.max(first + second, _action) + 12
                   : 10 + first + second + _action,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainerLow,
+              child: Material(
+                color: colors.surfaceContainer,
+                elevation: 4,
+                shadowColor: Colors.black54,
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: colors.outline, width: 0.5),
+                  side: BorderSide(color: colors.outlineVariant),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: body,
               ),
             );
@@ -1364,97 +1495,6 @@ class _Readout extends StatelessWidget {
       ),
     );
   }
-}
-
-/// What the key line names but a reader cannot read off it: the band's ramp,
-/// the protein page's own, low to high; what the dashed line is; and, where
-/// some records have no AVI score and so no height to be drawn at, how many.
-class _RampKey extends StatelessWidget {
-  const _RampKey({required this.unscored});
-
-  final int unscored;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final Color muted = theme.colorScheme.onSurfaceVariant;
-    final TextStyle? style = theme.textTheme.labelSmall?.copyWith(
-      color: muted,
-      letterSpacing: 0,
-    );
-    return Wrap(
-      key: const ValueKey<String>('variants-ramp'),
-      spacing: 14,
-      runSpacing: 4,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: <Widget>[
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text('ESM low', style: style),
-            Container(
-              width: 48,
-              height: 4,
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(2),
-                gradient: const LinearGradient(
-                  colors: <Color>[
-                    ConstraintColors.tolerant,
-                    ConstraintColors.moderate,
-                    ConstraintColors.constrained,
-                  ],
-                ),
-              ),
-            ),
-            Text('high', style: style),
-          ],
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            CustomPaint(
-              size: const Size(18, 4),
-              painter: _Dashes(theme.colorScheme.outlineVariant),
-            ),
-            const SizedBox(width: 6),
-            Text('AVI 20, top 1% genome-wide', style: style),
-          ],
-        ),
-        if (unscored > 0)
-          Text(
-            '${grouped(unscored)} without AVI, not drawn',
-            key: const ValueKey<String>('variants-unscored'),
-            style: style,
-          ),
-      ],
-    );
-  }
-}
-
-/// The strip's dashed line, for its key.
-class _Dashes extends CustomPainter {
-  const _Dashes(this.colour);
-
-  final Color colour;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = colour
-      ..strokeWidth = 1;
-    final double y = size.height / 2;
-    for (double x = 0; x < size.width; x += 6) {
-      canvas.drawLine(
-        Offset(x, y),
-        Offset(x + 3 < size.width ? x + 3 : size.width, y),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Dashes old) => old.colour != colour;
 }
 
 /// That the list under a zoomed strip holds only what the strip draws, and
