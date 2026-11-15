@@ -148,7 +148,8 @@ class _TrainingRunViewState extends State<TrainingRunView>
   /// its words keeps it, so nothing jumps.
   StagePace _pace = StagePace.even(LmStage.tokenise.beats.toDouble());
 
-  /// Each stage's pace, once worked out for a step, a peptide and a place.
+  /// Each stage's pace, once worked out for a run, a step, a peptide and a
+  /// place.
   final Map<Object, StagePace> _paces = <Object, StagePace>{};
   bool _reduced = false;
   LmKit? _kit;
@@ -243,7 +244,7 @@ class _TrainingRunViewState extends State<TrainingRunView>
 
   /// How [stage] plays at the step, peptide and place on screen.
   StagePace _paceFor(LmStage stage) => _paces.putIfAbsent(
-    (stage, _checkpoint, _peptide, _position),
+    (_trace, stage, _checkpoint, _peptide, _position),
     () => TrainingRunView.paceOf(stage, _view(LmInks.of(context))),
   );
 
