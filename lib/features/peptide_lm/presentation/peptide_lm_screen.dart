@@ -13,6 +13,7 @@ import '../../../shared/format.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../domain/loop_pace.dart';
+import '../domain/stage_pace.dart';
 import '../domain/training_timeline.dart';
 import '../domain/training_trace.dart';
 import 'cubit/peptide_lm_cubit.dart';
@@ -86,9 +87,40 @@ class TrainingRunView extends StatefulWidget {
 
   final TrainingTrace trace;
 
-  /// A beat: two seconds, the page's one speed, slow enough to follow each
-  /// change.
-  static const Duration beat = Duration(seconds: 2);
+  /// How [stage] plays for [view] (`StagePace`): every beat at least twice as
+  /// slowly as the two seconds it once took, and every caption on screen
+  /// long enough to be read, found where the captions change: sampled every
+  /// sixteenth of a beat, each change then narrowed to a thousandth of one.
+  static StagePace paceOf(LmStage stage, LmView view) {
+    const TrainingTimeline timeline = TrainingTimeline();
+    final LmScene scene = sceneOf(stage);
+    final double beats = stage.beats.toDouble();
+    String captionAt(double beat) => scene.caption(view, timeline.frameIn(stage, beat / beats));
+    String shown = captionAt(0);
+    final List<PaceCaption> captions = <PaceCaption>[PaceCaption(0, shown.length)];
+    for (int k = 1; k <= stage.beats * _paceSamples; k++) {
+      final String now = captionAt(k / _paceSamples);
+      if (now == shown) {
+        continue;
+      }
+      double before = (k - 1) / _paceSamples;
+      double after = k / _paceSamples;
+      while (after - before > _paceNarrowed) {
+        final double middle = (before + after) / 2;
+        if (captionAt(middle) == shown) {
+          before = middle;
+        } else {
+          after = middle;
+        }
+      }
+      captions.add(PaceCaption(after, now.length));
+      shown = now;
+    }
+    return StagePace(beats, captions);
+  }
+
+  static const int _paceSamples = 16;
+  static const double _paceNarrowed = 1 / 1024;
 
   /// The stage bar's room at either end and under it: with a name's own 8,
   /// its first and last names stand 20 from the edge, as the caption does.
@@ -107,9 +139,17 @@ class _TrainingRunViewState extends State<TrainingRunView>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const TrainingTimeline _timeline = TrainingTimeline();
 
-  /// How far through [_stage], from 0 to 1, where it stops and holds.
+  /// How far through [_stage]'s time, from 0 to 1, where it stops and
+  /// holds; [_pace] turns it into how far through the stage.
   late final AnimationController _clock = AnimationController(vsync: this);
   LmStage _stage = LmStage.tokenise;
+
+  /// How [_stage] plays, fixed when it starts: a tap mid-stage that changes
+  /// its words keeps it, so nothing jumps.
+  StagePace _pace = StagePace.even(LmStage.tokenise.beats.toDouble());
+
+  /// Each stage's pace, once worked out for a step, a peptide and a place.
+  final Map<Object, StagePace> _paces = <Object, StagePace>{};
   bool _reduced = false;
   LmKit? _kit;
   int _checkpoint = 0;
@@ -188,7 +228,24 @@ class _TrainingRunViewState extends State<TrainingRunView>
   }
 
   /// With reduced motion, the stage played through.
-  TrainingFrame _frame() => _timeline.frameIn(_stage, _reduced ? 1 : _clock.value);
+  TrainingFrame _frame() => _timeline.frameIn(_stage, _reduced ? 1 : _pace.localAt(_clock.value));
+
+  /// What the stages draw from: the run at the step, peptide and place on
+  /// screen.
+  LmView _view(LmInks inks) => LmView(
+    trace: _trace,
+    checkpoint: _trace.checkpoints[_checkpoint],
+    peptide: _peptide,
+    position: _position,
+    inks: inks,
+    kit: _kit!,
+  );
+
+  /// How [stage] plays at the step, peptide and place on screen.
+  StagePace _paceFor(LmStage stage) => _paces.putIfAbsent(
+    (stage, _checkpoint, _peptide, _position),
+    () => TrainingRunView.paceOf(stage, _view(LmInks.of(context))),
+  );
 
   /// How tall the stage on screen's tallest caption is at [width], so that
   /// the caption's box, and the canvas over it, hold still while it plays:
@@ -243,16 +300,21 @@ class _TrainingRunViewState extends State<TrainingRunView>
     if (_stage == LmStage.loop) {
       _clock
         ..stop()
-        ..value = LoopPace.of(_trace).landing(index);
+        ..value = _pace.fractionAt(LoopPace.of(_trace).landing(index));
     }
   }
 
-  /// Plays [stage] once from its start, and holds on its last frame.
+  /// Plays [stage] once from its start, at its own pace, and holds on its
+  /// last frame.
   void _play(LmStage stage) {
-    setState(() => _stage = stage);
+    final StagePace pace = _paceFor(stage);
+    setState(() {
+      _stage = stage;
+      _pace = pace;
+    });
     _clock
       ..stop()
-      ..duration = TrainingRunView.beat * stage.beats;
+      ..duration = pace.duration;
     if (!_reduced) unawaited(_clock.forward(from: 0));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _reveal(stage);
@@ -351,15 +413,7 @@ class _TrainingRunViewState extends State<TrainingRunView>
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final LmInks inks = LmInks.of(context);
-    final LmView view = LmView(
-      trace: _trace,
-      checkpoint: _trace.checkpoints[_checkpoint],
-      peptide: _peptide,
-      position: _position,
-      inks: inks,
-      kit: _kit!,
-    );
+    final LmView view = _view(LmInks.of(context));
     final double textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
     return Scaffold(
       appBar: AppBar(

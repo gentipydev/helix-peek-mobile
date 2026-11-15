@@ -7,12 +7,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:helixpeek/core/network/api_exception.dart';
 import 'package:helixpeek/core/theme/app_theme.dart';
+import 'package:helixpeek/core/theme/app_typography.dart';
 import 'package:helixpeek/features/peptide_lm/data/training_run_repository.dart';
+import 'package:helixpeek/features/peptide_lm/domain/stage_pace.dart';
 import 'package:helixpeek/features/peptide_lm/domain/training_timeline.dart';
 import 'package:helixpeek/features/peptide_lm/domain/training_trace.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/cubit/peptide_lm_cubit.dart';
+import 'package:helixpeek/features/peptide_lm/presentation/lm_inks.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/peptide_lm_screen.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/scenes/embedding_scene.dart';
+import 'package:helixpeek/features/peptide_lm/presentation/scenes/lm_drawing.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/scenes/lm_scene.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/scenes/lm_scene_painter.dart';
 import 'package:helixpeek/features/peptide_lm/presentation/scenes/stream_table.dart';
@@ -59,6 +63,39 @@ void main() {
   String caption(WidgetTester tester) =>
       tester.widget<Text>(find.byKey(const ValueKey<String>('peptide-lm-caption'))).data!;
 
+  /// How [stage] plays on the page as it opens: the run's first step, its
+  /// first peptide and that peptide's middle place.
+  StagePace paceOf(WidgetTester tester, LmStage stage) {
+    final BuildContext context = tester.element(find.byType(TrainingRunView));
+    final ThemeData theme = Theme.of(context);
+    final LmKit kit = LmKit(
+      mono: AppTypography.sequenceSmall(theme.colorScheme.onSurfaceVariant),
+      sans: theme.caption!,
+      scaler: TextScaler.noScaling,
+    );
+    addTearDown(kit.dispose);
+    return TrainingRunView.paceOf(
+      stage,
+      LmView(
+        trace: trace,
+        checkpoint: trace.checkpoints.first,
+        peptide: 0,
+        position: trace.peptides.first.inputs ~/ 2,
+        inks: LmInks.of(context),
+        kit: kit,
+      ),
+    );
+  }
+
+  /// How long [stage] takes on the page to play its first [beats] beats.
+  Duration upTo(WidgetTester tester, LmStage stage, double beats) {
+    final StagePace pace = paceOf(tester, stage);
+    return pace.duration * pace.fractionAt(beats / stage.beats);
+  }
+
+  /// Longer than [stage] takes to play through.
+  Duration past(WidgetTester tester, LmStage stage) => paceOf(tester, stage).duration + const Duration(seconds: 1);
+
   /// Taps [label]'s stage on the bar, scrolled into view first as a reader
   /// would.
   Future<void> tapStage(WidgetTester tester, String label) async {
@@ -92,19 +129,25 @@ void main() {
     expect(find.byKey(const ValueKey<String>('peptide-lm-canvas')), findsOneWidget);
     expect(caption(tester), startsWith('Two peptides'));
     // Playing: a few beats on, the light has crossed the peptides.
-    await tester.pump(TrainingRunView.beat * 7);
+    await tester.pump(upTo(tester, LmStage.tokenise, 7));
     expect(caption(tester), isNot(startsWith('Two peptides')));
   });
 
-  testWidgets('a stage plays once, at the one slow speed, and holds on its last frame', (
+  testWidgets('a stage plays once, at its own slow pace, and holds on its last frame', (
     WidgetTester tester,
   ) async {
     await host(tester);
-    // Two seconds a beat: at eleven seconds Tokenise's eleven beats are half
-    // played, the peptides still being framed.
+    final StagePace pace = paceOf(tester, LmStage.tokenise);
+    // At least twice the two seconds a beat it once took.
+    expect(pace.duration, greaterThanOrEqualTo(const Duration(seconds: 4) * LmStage.tokenise.beats));
+    // At eleven seconds, where its eleven beats were once half played, the
+    // peptides are still being read.
     await tester.pump(const Duration(seconds: 11));
+    expect(caption(tester), startsWith('Two peptides'));
+    // Half its beats in, the peptides are being framed.
+    await tester.pump(pace.duration * pace.fractionAt(0.5) - const Duration(seconds: 11));
     expect(caption(tester), startsWith('<bos> (<) and <eos> (>) frame each one'));
-    await tester.pump(TrainingRunView.beat * (LmStage.tokenise.beats + 20));
+    await tester.pump(past(tester, LmStage.tokenise));
     expect(caption(tester), startsWith('The vocabulary, counted: '));
     expect(tester.binding.hasScheduledFrame, isFalse);
     expect(find.byTooltip('Play'), findsOneWidget);
@@ -114,11 +157,11 @@ void main() {
     WidgetTester tester,
   ) async {
     await host(tester);
-    await tester.pump(TrainingRunView.beat * 3);
+    await tester.pump(upTo(tester, LmStage.tokenise, 3));
     await tester.tap(find.byTooltip('Pause'));
     await tester.pump();
     expect(find.byTooltip('Play'), findsOneWidget);
-    await tester.pump(TrainingRunView.beat * 20);
+    await tester.pump(past(tester, LmStage.tokenise));
     expect(caption(tester), startsWith('Two peptides'));
     expect(tester.binding.hasScheduledFrame, isFalse);
     await tester.tap(find.byTooltip('Play'));
@@ -126,9 +169,9 @@ void main() {
     expect(find.byTooltip('Pause'), findsOneWidget);
     // On from where it stood: five and a half beats in, the peptides are
     // being framed (from the start, two and a half would still be scanning).
-    await tester.pump(TrainingRunView.beat * 2.5);
+    await tester.pump(upTo(tester, LmStage.tokenise, 5.5) - upTo(tester, LmStage.tokenise, 3));
     expect(caption(tester), startsWith('<bos> (<) and <eos> (>) frame each one'));
-    await tester.pump(TrainingRunView.beat * 20);
+    await tester.pump(past(tester, LmStage.tokenise));
     expect(caption(tester), startsWith('The vocabulary, counted: '));
     expect(find.byTooltip('Play'), findsOneWidget);
   });
@@ -140,13 +183,13 @@ void main() {
     await tapStage(tester, 'Loss');
     await tester.pump();
     final String start = caption(tester);
-    await tester.pump(TrainingRunView.beat * (LmStage.loss.beats + 5));
+    await tester.pump(past(tester, LmStage.loss));
     expect(caption(tester), isNot(start));
     await tester.tap(find.byTooltip('Replay'));
     await tester.pump();
     expect(caption(tester), start);
     // Played through, Play plays it again from its start too.
-    await tester.pump(TrainingRunView.beat * (LmStage.loss.beats + 5));
+    await tester.pump(past(tester, LmStage.loss));
     expect(caption(tester), isNot(start));
     await tester.tap(find.byTooltip('Play'));
     await tester.pump();
@@ -157,12 +200,12 @@ void main() {
     WidgetTester tester,
   ) async {
     await host(tester);
-    await tester.pump(TrainingRunView.beat * (LmStage.tokenise.beats + 1));
+    await tester.pump(past(tester, LmStage.tokenise));
     expect(caption(tester), startsWith('The vocabulary, counted: '));
     await tapStage(tester, 'Tokenise');
     await tester.pump();
     expect(caption(tester), startsWith('Two peptides'));
-    await tester.pump(TrainingRunView.beat * 7);
+    await tester.pump(upTo(tester, LmStage.tokenise, 7));
     expect(caption(tester), isNot(startsWith('Two peptides')));
   });
 
@@ -305,7 +348,7 @@ void main() {
     await tester.pump();
     expect(shown(), LmStage.shift.index);
     final String opening = caption(tester);
-    await tester.pump(TrainingRunView.beat * (LmStage.shift.beats + 1));
+    await tester.pump(past(tester, LmStage.shift));
     expect(caption(tester), isNot(opening));
     await tapStage(tester, 'Shift');
     await tester.pump();
@@ -409,11 +452,13 @@ void main() {
     final Finder caption = find.byKey(const ValueKey<String>('peptide-lm-caption'));
     final Set<double> tops = <double>{};
     final Set<double> heights = <double>{};
+    // Every half beat's worth of its time, start to end.
+    final Duration half = paceOf(tester, LmStage.tokenise).duration ~/ (2 * LmStage.tokenise.beats);
     for (int i = 0; i <= 2 * LmStage.tokenise.beats; i++) {
       final Rect at = tester.getRect(caption);
       tops.add(at.top);
       heights.add(at.height);
-      await tester.pump(TrainingRunView.beat * 0.5);
+      await tester.pump(half);
     }
     // Captions of more than one height came and went, each from one top.
     expect(heights.length, greaterThan(1));

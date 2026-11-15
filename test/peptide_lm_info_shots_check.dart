@@ -108,7 +108,8 @@ void main() {
           await tester.tap(name);
           await tester.pump();
         }
-        await tester.pump(TrainingRunView.beat * (stage.beats + 1));
+        // Longer than any stage plays (`StagePace`): its last frame.
+        await tester.pump(const Duration(minutes: 10));
         await tester.tap(find.byKey(const ValueKey<String>('peptide-lm-info')));
         await tester.pumpAndSettle();
         final String shot = '${stage.name}${step == null ? '' : '_step$step'}_$s';
