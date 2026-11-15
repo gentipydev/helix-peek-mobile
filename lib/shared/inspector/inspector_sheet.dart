@@ -319,104 +319,116 @@ class _InspectorSheetState extends State<InspectorSheet> {
                           right: BorderSide(color: colors.outlineVariant),
                         ),
                       ),
-                      child: CustomScrollView(
-                        key: widget.scrollKey,
-                        controller: scroll,
-                        physics: const ClampingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
-                        slivers: <Widget>[
-                          PinnedHeaderSliver(
-                            child: ColoredBox(
-                              color: colors.surfaceContainer,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  SizedBox(
-                                    height: 44,
-                                    child: Stack(
-                                      children: <Widget>[
-                                        Positioned.fill(
-                                          left: 0,
-                                          right: 0,
-                                          child: Semantics(
-                                            label: widget.resizeLabel,
-                                            onDismiss: widget.onDismiss,
-                                            hint: 'Tap to expand or collapse, or drag vertically',
-                                            button: true,
-                                            onIncrease: () =>
-                                                _moveTo(InspectorSheet.maximumSize),
-                                            onDecrease: () => _moveTo(
-                                              widget.sheet.size >
-                                                      InspectorSheet.initialSize +
-                                                          0.01
-                                                  ? InspectorSheet.initialSize
-                                                  : _compactSize,
-                                            ),
-                                            child: GestureDetector(
-                                              key: widget.handleKey,
-                                              behavior: HitTestBehavior.opaque,
-                                              onVerticalDragUpdate: _dragHandle,
-                                              onVerticalDragEnd: _settleHandle,
-                                              onVerticalDragCancel: () =>
-                                                  _settleHandle(DragEndDetails()),
-                                              onTap: () => _moveTo(
-                                                widget.sheet.size >
-                                                        (InspectorSheet.initialSize +
-                                                                InspectorSheet
-                                                                    .maximumSize) /
-                                                            2
-                                                    ? InspectorSheet.initialSize
-                                                    : InspectorSheet.maximumSize,
-                                              ),
-                                              child: Center(
-                                                child: Container(
-                                                  width: 32,
-                                                  height: 4,
-                                                  decoration: BoxDecoration(
-                                                    color: colors.onSurfaceVariant
-                                                        .withValues(alpha: 0.45),
-                                                    borderRadius:
-                                                        BorderRadius.circular(2),
+                      // The sheet's edges fade rather than cut: under the
+                      // pinned header once the content runs under it, and at
+                      // the sheet's foot, where its last line would be sliced
+                      // through, as the page fades under the stage bar (the
+                      // user's call, 2026-11-15).
+                      child: _FootFade(
+                        color: colors.surfaceContainer,
+                        child: CustomScrollView(
+                          key: widget.scrollKey,
+                          controller: scroll,
+                          physics: const ClampingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          slivers: <Widget>[
+                            PinnedHeaderSliver(
+                              child: _HeaderFade(
+                                scroll: scroll,
+                                color: colors.surfaceContainer,
+                                child: ColoredBox(
+                                  color: colors.surfaceContainer,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      SizedBox(
+                                        height: 44,
+                                        child: Stack(
+                                          children: <Widget>[
+                                            Positioned.fill(
+                                              left: 0,
+                                              right: 0,
+                                              child: Semantics(
+                                                label: widget.resizeLabel,
+                                                onDismiss: widget.onDismiss,
+                                                hint: 'Tap to expand or collapse, or drag vertically',
+                                                button: true,
+                                                onIncrease: () =>
+                                                    _moveTo(InspectorSheet.maximumSize),
+                                                onDecrease: () => _moveTo(
+                                                  widget.sheet.size >
+                                                          InspectorSheet.initialSize +
+                                                              0.01
+                                                      ? InspectorSheet.initialSize
+                                                      : _compactSize,
+                                                ),
+                                                child: GestureDetector(
+                                                  key: widget.handleKey,
+                                                  behavior: HitTestBehavior.opaque,
+                                                  onVerticalDragUpdate: _dragHandle,
+                                                  onVerticalDragEnd: _settleHandle,
+                                                  onVerticalDragCancel: () =>
+                                                      _settleHandle(DragEndDetails()),
+                                                  onTap: () => _moveTo(
+                                                    widget.sheet.size >
+                                                            (InspectorSheet.initialSize +
+                                                                    InspectorSheet
+                                                                        .maximumSize) /
+                                                                2
+                                                        ? InspectorSheet.initialSize
+                                                        : InspectorSheet.maximumSize,
+                                                  ),
+                                                  child: Center(
+                                                    child: Container(
+                                                      width: 32,
+                                                      height: 4,
+                                                      decoration: BoxDecoration(
+                                                        color: colors.onSurfaceVariant
+                                                            .withValues(alpha: 0.45),
+                                                        borderRadius:
+                                                            BorderRadius.circular(2),
+                                                      ),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                        // Dismissal without discovering the
-                                        // gesture: always in the pinned row.
-                                        Positioned(
-                                          right: 8,
-                                          top: 0,
-                                          bottom: 0,
-                                          child: IconButton(
-                                            key: widget.closeKey,
-                                            tooltip: 'Close',
-                                            onPressed: widget.onDismiss,
-                                            icon: const Icon(
-                                              Icons.close_rounded,
-                                              size: 20,
+                                            // Dismissal without discovering the
+                                            // gesture: always in the pinned row.
+                                            Positioned(
+                                              right: 8,
+                                              top: 0,
+                                              bottom: 0,
+                                              child: IconButton(
+                                                key: widget.closeKey,
+                                                tooltip: 'Close',
+                                                onPressed: widget.onDismiss,
+                                                icon: const Icon(
+                                                  Icons.close_rounded,
+                                                  size: 20,
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      if (widget.pinIdentity) widget.identity,
+                                    ],
                                   ),
-                                  if (widget.pinIdentity) widget.identity,
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                          // At short heights or large text sizes the identity
-                          // scrolls away, leaving the handle within reach.
-                          if (!widget.pinIdentity)
-                            SliverToBoxAdapter(child: widget.identity),
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                            sliver: SliverToBoxAdapter(child: widget.details),
-                          ),
-                        ],
+                            // At short heights or large text sizes the identity
+                            // scrolls away, leaving the handle within reach.
+                            if (!widget.pinIdentity)
+                              SliverToBoxAdapter(child: widget.identity),
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                              sliver: SliverToBoxAdapter(child: widget.details),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -428,4 +440,92 @@ class _InspectorSheetState extends State<InspectorSheet> {
       },
     );
   }
+}
+
+/// How far the sheet's edges fade.
+const double _fade = 14;
+
+/// A fade just under the pinned header, from the sheet's own surface to
+/// nothing, while the content is scrolled under the header: a line passing
+/// under it goes rather than being cut through. At rest the content starts
+/// below the header, and there is nothing to fade.
+class _HeaderFade extends StatelessWidget {
+  const _HeaderFade({
+    required this.scroll,
+    required this.color,
+    required this.child,
+  });
+
+  final ScrollController scroll;
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: <Widget>[
+      child,
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: -_fade,
+        height: _fade,
+        child: IgnorePointer(
+          child: ListenableBuilder(
+            listenable: scroll,
+            builder: (BuildContext context, Widget? fade) =>
+                scroll.hasClients && scroll.offset > 0
+                ? fade!
+                : const SizedBox.shrink(),
+            child: DecoratedBox(
+              key: const ValueKey<String>('inspector-fade-top'),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[color, color.withValues(alpha: 0)],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+/// A fade at the sheet's foot, from nothing to the sheet's own surface, over
+/// whatever the content has there: its last line goes rather than being cut
+/// at the edge. The content ends in more padding than the fade is tall, so
+/// scrolled to its end nothing is faded.
+class _FootFade extends StatelessWidget {
+  const _FootFade({required this.color, required this.child});
+
+  final Color color;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    children: <Widget>[
+      child,
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: _fade,
+        child: IgnorePointer(
+          child: DecoratedBox(
+            key: const ValueKey<String>('inspector-fade-bottom'),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[color.withValues(alpha: 0), color],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
 }

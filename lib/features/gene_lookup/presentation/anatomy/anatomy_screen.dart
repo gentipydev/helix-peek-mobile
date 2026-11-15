@@ -617,8 +617,8 @@ class _AnatomyScreenState extends State<AnatomyScreen>
               BaseTarget(at),
               from: (title: scope, at: ResidueTarget(residue)),
             ),
-      // A residue sheet's record opens its base's page of both models and
-      // ClinVar; a base sheet's codon line already does.
+      // A residue sheet's record opens its base's page of both models; a
+      // base sheet's own row already does.
       compareFor: residue == null
           ? null
           : (VariantEvidence e) => _compareAt(e.variant.position),
@@ -1270,14 +1270,16 @@ class _AnatomyScreenState extends State<AnatomyScreen>
         (VariantEvidence e) => e.variant.alt,
       ),
       coding: facts.evidence,
-      onNote: _comparing(facts),
+      onCompare: _comparing(facts),
       chromosome: facts.impact.chromosome,
       // The transcript's own number where the base has one, and otherwise the
       // number the page above is already calling it by. Counting from the
       // record's first base instead would put a third numbering on screen.
       address: facts.where,
       region: facts.region,
-      note: facts.note,
+      // AVI's sheet names the codon and residue in its own words: ESM-2's
+      // band is the residue sheet's, and the AVI and ESM-2 page's.
+      note: facts.place,
       tint: facts.tint,
       controller: _sheet,
       slide: _sheetSlide,
@@ -1308,10 +1310,11 @@ class _AnatomyScreenState extends State<AnatomyScreen>
       position: position,
       track: _constraint,
     );
-    // For a coding base the residue it encodes is named with its constraint
-    // band, and the line opens the base's substitutions as AVI and ESM-2 each
-    // read them, ranked in the gene (the user's ask, 2026-10-22). The
-    // residue's own reading lives on the protein page.
+    // For a coding base the codon and the residue it encodes, plain, which
+    // the sheet writes as it is and the AVI and ESM-2 page with the residue's
+    // constraint band; the sheet's own row opens that page (the user's asks,
+    // 2026-10-22 and 2026-11-15). The residue's own reading lives on the
+    // protein page.
     final String place = switch (transcript) {
       final Role role when role.kind == RoleKind.intron =>
         address.intronFacts(role) ?? '',
@@ -1373,9 +1376,9 @@ class _AnatomyScreenState extends State<AnatomyScreen>
   }
 
   /// The base's substitutions side by side as both models read them: what the
-  /// base sheet's codon line opens, and a ClinVar record's link on the
-  /// residue sheet and the list (the user's asks, 2026-10-22 and 2026-10-25).
-  /// Null where the base offers no such page.
+  /// base sheet's "AVI and ESM-2 ›" row opens, and a ClinVar record's link on
+  /// the residue sheet and the list (the user's asks, 2026-10-22, 2026-10-25
+  /// and 2026-11-15). Null where the base offers no such page.
   VoidCallback? _comparing(_BaseFacts facts) {
     final GeneImpact? explained = facts.explained;
     final CodingEvidence? compared = facts.compared;
@@ -2699,8 +2702,9 @@ class _AnatomyScreenState extends State<AnatomyScreen>
 /// What a base sheet says of its base, and what its pages open with: AVI's
 /// reading ([impact] the track, [explained] it where it is this record's),
 /// the codon ([evidence], and [compared] where both models can be set side
-/// by side), the sheet's two lines ([place], and [note] with ESM's band), the
-/// base's name ([where]), its region and its tint.
+/// by side), its line ([place], the sheet's, and [note], the AVI and ESM-2
+/// page's, with ESM's band), the base's name ([where]), its region and its
+/// tint.
 typedef _BaseFacts = ({
   GeneImpact impact,
   BaseImpact reading,

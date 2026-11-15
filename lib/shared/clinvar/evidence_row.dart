@@ -66,7 +66,7 @@ class EvidenceRow extends StatelessWidget {
   final ValueChanged<int>? onBase;
 
   /// Opens the page that sets the record's change beside both models' reading
-  /// of it. Null hides the link: where the page is already a line away, or
+  /// of it. Null hides the link: where the page is already a row away, or
   /// where the record's base has no such page.
   final VoidCallback? onCompare;
 
@@ -378,6 +378,13 @@ class EvidenceDetail extends StatelessWidget {
         ? null
         : '${evidence.residue!.domain} · ${evidence.residue!.title}'
               '${evidence.residue!.bondPartner == null ? '' : ' · S–S ${evidence.residue!.bondPartner}'}';
+    // A record whose every condition is under its own classification has
+    // that classification on its row already; a heading over the conditions
+    // would say it a second time (110 of insulin's 166 records did). Where
+    // the conditions part — a combined or conflicting label — each part keeps
+    // its heading.
+    final bool headed = !(conditions.length == 1 &&
+        conditions.single.$1 == v.classification);
     return Padding(
       key: ValueKey<String>('evidence-detail-${v.id}'),
       padding: const EdgeInsets.fromLTRB(20, 0, 0, 12),
@@ -396,29 +403,32 @@ class EvidenceDetail extends StatelessWidget {
               children: <Widget>[
                 for (final (String classification, List<ClinVarTrait> traits)
                     in conditions) ...<Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Row(
-                      children: <Widget>[
-                        ClinVarDot(
-                          group: ClinVarGroup.of(classification),
-                          size: 7,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            classification,
-                            style: small?.copyWith(color: muted),
+                  if (headed)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: <Widget>[
+                          ClinVarDot(
+                            group: ClinVarGroup.of(classification),
+                            size: 7,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              classification,
+                              style: small?.copyWith(color: muted),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 2),
                   // The identifiers travel as one unit: beside the name when
                   // they fit, under it when they do not, never split.
                   for (final ClinVarTrait trait in traits)
                     Padding(
-                      padding: const EdgeInsets.only(left: 13),
+                      padding: EdgeInsets.only(left: headed ? 13 : 0),
                       child: Wrap(
                         spacing: 8,
                         crossAxisAlignment: WrapCrossAlignment.center,

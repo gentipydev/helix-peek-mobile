@@ -710,8 +710,9 @@ accession opens the record on ClinVar. A record's detail carries ClinVar's own
 words and its links; where only AVI applies to its change (off the protein,
 silent, a stop, the start codon) one line says so, in molecular words. Where
 both models score the change, their reading of it is the comparison page's,
-which the detail links to as "AVI and ESM-2 ›", but on a base sheet, whose
-codon line already opens it (the user's ask, 2026-10-25). That page carries
+which the detail links to as "AVI and ESM-2 ›", but on a base sheet, which
+opens it from a row of its own in the same words (the user's ask,
+2026-10-25). That page carries
 nothing of ClinVar: set beside the models there the same day, by class and
 then in strips, it complicated the page, and the user had it taken off. No
 count of agreement with ClinVar is shown anywhere: AVI already integrates
@@ -721,12 +722,23 @@ themselves.
 
 **R9.5 Each fact once.** A sheet shows its own model on its bars and carries
 the other model's number in its ClinVar rows. The two numbers meet on one page,
-the one a coding base's codon line opens (the user's ask, 2026-10-22): it sets
+the one a coding base's sheet opens from its "AVI and ESM-2 ›" row, under
+"Contributions ›" and in its style, where the base has a change to another
+amino acid that both models score (the user's ask, 2026-10-22; until
+2026-11-15 the codon line was the link, a "›" that said nowhere where it went,
+and named the residue's ESM-2 band on AVI's sheet): it sets
 the base's substitutions' two numbers side by side, each ranked among the
 gene's single-base missense substitutions, with how far the two agree across
 the gene (`docs/avi-esm-agreement.md`). An opened record no longer repeats
 them, nor AVI's largest contributions, which are the Contributions page's
-(2026-10-25).
+(2026-10-25). The base sheet names its codon and residue on one plain line
+in AVI's words, `codon 90 · GGC · Gly90`. The residue sheet reads its
+constraint once, on its level line (`highly constrained · 0.96`), with no
+rank in the protein, a second statement of the same number; of its note it
+keeps only the facts its identity does not give — where a cysteine's bridge
+goes, and a piece removed from the mature protein. An opened record says its
+class once: a heading over its conditions only where they are under more than
+one (2026-11-15).
 The page names its sources in its footer, with one line on how it compares
 them. What a source
 is, its scale and its caveats are written once, in

@@ -308,7 +308,7 @@ void main() {
     expect(compact, lessThan(ConstraintPanel.initialSize));
     expect(find.text('Cys31 · B7').hitTestable(), findsOneWidget);
     expect(
-      find.text(_data.positions[30].level.label).hitTestable(),
+      find.text('${_data.positions[30].level.label} · ${_data.positions[30].conservation.toStringAsFixed(2)}').hitTestable(),
       findsOneWidget,
     );
     await _capture(tester, 'sheet-compact');
@@ -606,7 +606,7 @@ void main() {
     await _capture(tester, 'protein-conservation');
     await _tap(tester, 70);
     await tester.pumpAndSettle();
-    expect(find.text('tolerant'), findsOneWidget);
+    expect(find.text('tolerant · ${_data.positions[70].conservation.toStringAsFixed(2)}'), findsOneWidget);
     expect(
       _cell(tester, 70).dy,
       lessThan(tester.getRect(find.byType(ConstraintPanel)).top),
@@ -706,7 +706,7 @@ void main() {
           reason: 'A score must remain readable on one line at $scale× text.',
         );
       }
-      final Finder note = find.text(_data.positions[30].note);
+      final Finder note = find.text(_data.positions[30].facts!);
       await tester.ensureVisible(note);
       await tester.pumpAndSettle();
       expect(note.hitTestable(), findsOneWidget);

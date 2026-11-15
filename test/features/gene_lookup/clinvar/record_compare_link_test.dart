@@ -116,7 +116,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 320));
     await tester.pumpAndSettle();
-    await tester.tap(_key('impact-note-link'));
+    await tester.ensureVisible(_key('impact-compare-open'));
+    await tester.pumpAndSettle();
+    await tester.tap(_key('impact-compare-open'));
     await tester.pumpAndSettle();
     expect(find.text('c.268 · AVI and ESM-2'), findsOneWidget);
     expect(

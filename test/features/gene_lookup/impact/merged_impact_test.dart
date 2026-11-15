@@ -274,7 +274,7 @@ void main() {
         plain(tester, 'impact-level'),
         'low impact · bottom 90% genome-wide',
       );
-      expect(plain(tester, 'impact-note'), endsWith('Val26 · highly constrained'));
+      expect(plain(tester, 'impact-note'), endsWith('Val26'));
       expect(_key('impact-note-link'), findsNothing);
       for (final String base in <String>['A', 'C', 'T']) {
         expect(_key('impact-tag-$base'), findsOneWidget, reason: base);
@@ -312,7 +312,9 @@ void main() {
   ) async {
     await _open(tester);
     await _tapPosition(tester, 5299);
-    await tester.tap(_key('impact-note-link'));
+    await tester.ensureVisible(_key('impact-compare-open'));
+    await tester.pumpAndSettle();
+    await tester.tap(_key('impact-compare-open'));
     await tester.pumpAndSettle();
     expect(find.byType(AgreementPage), findsOneWidget);
     expect(find.text('c.76 · AVI and ESM-2'), findsOneWidget);
@@ -378,7 +380,7 @@ void main() {
     expect(find.byType(AnatomySelectionCanvas), findsOneWidget);
     await _tapPosition(tester, 5301);
     expect(tester.widget<ImpactPanel>(_panel).coding!.residueName, 'Val26');
-    expect(plain(tester, 'impact-note'), endsWith('Val26 · highly constrained'));
+    expect(plain(tester, 'impact-note'), endsWith('Val26'));
     await _capture(tester, 'merged-gene');
   });
 

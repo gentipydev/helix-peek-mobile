@@ -169,6 +169,32 @@ final class ResidueConstraint {
         '${second == null ? '' : ' · $second'}';
   }
 
+  /// What the residue sheet says of this residue beyond its name, its piece
+  /// and its partner, as one line of data rather than sentences: where a
+  /// cysteine's bridge goes — `links the B chain to the A chain`, `closes a
+  /// loop within the A chain` — and whether its piece is cut away, `removed
+  /// from the mature protein` (the piece itself is named on the line above
+  /// it). Null where there is neither.
+  ///
+  /// The sheet showed [note] until 2026-11-15, whose other sentences restated
+  /// the constraint band the sheet draws (the user's call: each fact once).
+  String? get facts {
+    final List<String> parts = <String>[
+      if (bondPartner != null)
+        switch (bondPartnerRegion ?? region) {
+          final ConstraintRegion other when other == region =>
+            'closes a loop within ${region.inSentence}',
+          final ConstraintRegion other =>
+            'links ${region.inSentence} to ${other.inSentence}',
+        },
+      if (!region.kept) 'removed from the mature protein',
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  /// The residue in sentences: what the model favours here, and [facts].
+  /// No screen shows it since 2026-11-15 — the sheet shows [facts] — and
+  /// its tests are a walk's; it is listed for a refactor session.
   String get note {
     if (level == ConstraintLevel.high) {
       final String favored = AminoAcids.of(ranked.first.aminoAcid)!.name;

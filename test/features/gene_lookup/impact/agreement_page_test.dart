@@ -190,11 +190,11 @@ void main() {
     await openSheet(tester);
     expect(
       tester.widget<Text>(_key('impact-note')).data,
-      'codon 90 · GGC · Gly90 · highly constrained ›',
+      'codon 90 · GGC · Gly90',
     );
-    await tester.ensureVisible(_key('impact-note-link'));
+    await tester.ensureVisible(_key('impact-compare-open'));
     await tester.pumpAndSettle();
-    await tester.tap(_key('impact-note-link'));
+    await tester.tap(_key('impact-compare-open'));
     await tester.pumpAndSettle();
     expect(find.text('c.268 · AVI and ESM-2'), findsOneWidget);
     expect(
@@ -299,13 +299,13 @@ void main() {
     // c.11: a stop and two missense changes, so the page has something to
     // set side by side.
     await openSheet(tester, position: _c11);
-    expect(_key('impact-note-link'), findsOneWidget);
-    expect(tester.widget<Text>(_key('impact-note')).data, endsWith(' ›'));
+    expect(_key('impact-compare-open'), findsOneWidget);
+    expect(tester.widget<Text>(_key('impact-note')).data, isNot(endsWith('›')));
     // c.270, all three silent, and c.2, in the start codon: the line names
     // the codon and residue and leads nowhere.
     for (final int position in <int>[_c270, _c2]) {
       await openSheet(tester, position: position);
-      expect(_key('impact-note-link'), findsNothing, reason: '$position');
+      expect(_key('impact-compare-open'), findsNothing, reason: '$position');
       expect(
         tester.widget<Text>(_key('impact-note')).data,
         isNot(endsWith('›')),

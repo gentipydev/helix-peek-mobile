@@ -17,9 +17,10 @@ import 'coding_evidence.dart';
 /// What one base of the gene answers with, in the sheet the residue panel uses.
 ///
 /// AVI is this sheet's own model, so its bars are the body. The residue a
-/// coding base is read into is one line that opens that residue's own sheet,
-/// rather than a second model summarised here: ESM's reading lives on the
-/// protein page, and the two meet only for a ClinVar record, in its detail.
+/// coding base is read into is named on one plain line, its codon and its
+/// residue, rather than a second model summarised here: ESM's reading lives
+/// on the protein page, and the two models meet on the base's own AVI and
+/// ESM-2 page, a row under "Contributions ›" where the base has one.
 /// The sheet itself is [InspectorSheet], and substitution rows remain
 /// [ScoreBar].
 ///
@@ -38,7 +39,7 @@ class ImpactPanel extends StatefulWidget {
     required this.pinIdentity,
     required this.onDismiss,
     this.coding,
-    this.onNote,
+    this.onCompare,
     this.reported = const <String, ClinVarGroup>{},
     this.observedEvidence,
     this.explanationTrack,
@@ -61,9 +62,11 @@ class ImpactPanel extends StatefulWidget {
   /// Null off the coding sequence.
   final CodingEvidence? coding;
 
-  /// Opens what [note] names — the residue a coding base encodes. Null makes
-  /// the note plain text.
-  final VoidCallback? onNote;
+  /// Opens the base's substitutions as AVI and ESM-2 each read them, side by
+  /// side, on a page of their own: a row under "Contributions ›", in its
+  /// style. Null where the base has no such page — no change to another amino
+  /// acid that both models score — and no row.
+  final VoidCallback? onCompare;
 
   /// Alternative bases ClinVar has a record for here, each with its most
   /// severe group, marked on their own bars.
@@ -83,8 +86,8 @@ class ImpactPanel extends StatefulWidget {
   final String region;
 
   /// One line of context: the splice sites the intron is bounded by, or the
-  /// codon the base sits in and the residue it encodes. Empty where there is
-  /// nothing worth saying.
+  /// codon the base sits in and the residue it encodes, plain, and in this
+  /// model's words only. Empty where there is nothing worth saying.
   final String note;
 
   /// The colour the page draws this base's region in, so the chip and the grid
@@ -152,7 +155,7 @@ class _ImpactPanelState extends State<ImpactPanel> {
           key: ValueKey<int>(position),
           impact: widget.impact,
           note: widget.note,
-          onNote: widget.onNote,
+          onCompare: widget.onCompare,
           explanation: _explanation,
           coding: widget.coding,
           reported: widget.reported,
@@ -279,7 +282,7 @@ class _Details extends StatelessWidget {
     required this.note,
     required this.explanation,
     required this.reported,
-    this.onNote,
+    this.onCompare,
     this.coding,
     this.observedEvidence,
     this.explanationTrack,
@@ -289,7 +292,7 @@ class _Details extends StatelessWidget {
 
   final BaseImpact impact;
   final String note;
-  final VoidCallback? onNote;
+  final VoidCallback? onCompare;
   final bool explanation;
   final CodingEvidence? coding;
   final Map<String, ClinVarGroup> reported;
@@ -379,7 +382,7 @@ class _Details extends StatelessWidget {
               ],
               if (note.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 8),
-                _NoteLine(text: note, onTap: onNote),
+                _NoteLine(text: note),
               ],
               const SizedBox(height: 12),
               Text(
@@ -412,7 +415,25 @@ class _Details extends StatelessWidget {
             ],
           ),
         ),
-        if (explained) _ContributionsLink(onTap: onOpenContributions!),
+        if (explained)
+          _PageLink(
+            row: const ValueKey<String>('impact-contributions-open'),
+            label: 'Contributions',
+            spoken: 'Contributions to each AVI score',
+            onTap: onOpenContributions!,
+          ),
+        // Where the base's changes make another amino acid, both models'
+        // reading of them, in the words the ClinVar record uses for the same
+        // page (the user's call, 2026-11-15: a "›" at the end of the codon
+        // line, on 68 of insulin's 327 coding bases, said nowhere where it
+        // went, and carried ESM-2's word on AVI's sheet).
+        if (onCompare case final VoidCallback compare)
+          _PageLink(
+            row: const ValueKey<String>('impact-compare-open'),
+            label: 'AVI and ESM-2',
+            spoken: 'AVI and ESM-2, side by side',
+            onTap: compare,
+          ),
         ?observedEvidence,
       ],
     );
@@ -449,11 +470,21 @@ class _Details extends StatelessWidget {
       change == null || change.isEmpty ? '' : ', $change';
 }
 
-/// The way to every substitution's AVI contributions, a page of its own: the
-/// sheet's one row that leaves it, as the ClinVar line's "All ›" does.
-class _ContributionsLink extends StatelessWidget {
-  const _ContributionsLink({required this.onTap});
+/// A way off the sheet to a page of its own — every substitution's AVI
+/// contributions, or the base's AVI and ESM-2 page — as a row: the sheet's
+/// rows that leave it, as the ClinVar line's "All ›" does.
+class _PageLink extends StatelessWidget {
+  const _PageLink({
+    required this.row,
+    required this.label,
+    required this.spoken,
+    required this.onTap,
+  });
 
+  /// The key of the row that is pressed.
+  final Key row;
+  final String label;
+  final String spoken;
   final VoidCallback onTap;
 
   @override
@@ -465,17 +496,17 @@ class _ContributionsLink extends StatelessWidget {
     );
     return Semantics(
       button: true,
-      label: 'Contributions to each AVI score',
+      label: spoken,
       excludeSemantics: true,
       child: InkWell(
-        key: const ValueKey<String>('impact-contributions-open'),
+        key: row,
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Row(
             children: <Widget>[
-              Expanded(child: Text('Contributions', style: style)),
+              Expanded(child: Text(label, style: style)),
               Text('›', style: style),
             ],
           ),
@@ -485,43 +516,22 @@ class _ContributionsLink extends StatelessWidget {
   }
 }
 
-/// The note under the level: plain where it only describes, and a way into the
-/// base's AVI and ESM-2 page where it names a residue.
+/// The note under the level, which only describes: the splice sites of an
+/// intron, or a coding base's codon and residue.
 class _NoteLine extends StatelessWidget {
-  const _NoteLine({required this.text, this.onTap});
+  const _NoteLine({required this.text});
 
   final String text;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final Text label = Text(
-      onTap == null ? text : '$text ›',
+    return Text(
+      text,
       key: const ValueKey<String>('impact-note'),
       style: theme.textTheme.bodySmall?.copyWith(
         fontFamily: AppTypography.sansFamily,
-        color: onTap == null
-            ? theme.colorScheme.onSurfaceVariant
-            : theme.colorScheme.onSurface,
-      ),
-    );
-    if (onTap == null) {
-      return label;
-    }
-    return Semantics(
-      button: true,
-      child: InkWell(
-        key: const ValueKey<String>('impact-note-link'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: label,
-          ),
-        ),
+        color: theme.colorScheme.onSurfaceVariant,
       ),
     );
   }

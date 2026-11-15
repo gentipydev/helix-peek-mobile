@@ -283,7 +283,7 @@ void main() {
       ),
     );
     await _tapCell(tester, 150);
-    final Finder link = find.byKey(const ValueKey<String>('impact-note-link'));
+    final Finder link = find.byKey(const ValueKey<String>('impact-compare-open'));
     expect(link, findsOneWidget);
     expect(tester.getSize(link).height, greaterThanOrEqualTo(44));
   });

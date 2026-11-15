@@ -290,7 +290,7 @@ part on Ser (1.7% and 29%).
 | DNM1 | 5,690 | 0.43 | 67% of 4,345 |
 | UBB | 1,501 | 0.40 | 62% of 1,138 |
 
-PLN has no ESM-2 track, so its codon line opens nothing, as before.
+PLN has no ESM-2 track, so its sheet offers no such row, as before.
 
 **Cost**
 
@@ -397,8 +397,8 @@ the residue sheet and in the list, keeps:
 It no longer carries the ESM and AVI lines, the strong-end lines or AVI's
 largest contributions. On the residue sheet and in the list it offers "AVI
 and ESM-2 ›" where its base has this page, which rises over the sheet or the
-list; × returns there as it was left. On the base sheet the codon line is
-that link. About these sources no longer names ESM-1b's −7.5 line, which
+list; × returns there as it was left. On the base sheet the codon line was
+that link; since 2026-11-15 it is the sheet's own row (below). About these sources no longer names ESM-1b's −7.5 line, which
 nothing draws any more.
 
 ClinVar was put on this page the same day and taken off again at the user's
@@ -431,3 +431,19 @@ all for the record:
 
 `agreement_page_test.dart` was changed for the notice. No golden opens a
 record or this page, so no PNG moves.
+
+**A row of its own (2026-11-15)**
+
+The codon line led to this page with a "›" at its end, on 68 of insulin's 327
+coding bases and plain text on the other 259; the "›" did not say where it
+went, and the line carried the residue's ESM-2 band, unlabelled, on AVI's
+sheet. Now the line is plain on every base and in AVI's words alone,
+`codon 90 · GGC · Gly90`, and the page is a row of its own, "AVI and ESM-2 ›",
+the words a ClinVar record uses for it, under "Contributions ›" and in that
+row's style (`impact-compare-open`). The row is there where the line was a
+link: a base with at least one change to another amino acid that both models
+score (`AgreementRow.anyAt`). The page's own card keeps the line with the
+band, `codon 90 · GGC · Gly90 · highly constrained`: there ESM-2 is one of the
+two models the page is about. Four walk tests followed the link's key; their
+edits are named in app commit history for that day.
+

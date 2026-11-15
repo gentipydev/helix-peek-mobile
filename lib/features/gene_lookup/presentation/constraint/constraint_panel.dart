@@ -91,7 +91,6 @@ class _ConstraintPanelState extends State<ConstraintPanel> {
           child: _ResidueIdentity(
             key: ValueKey<int>(widget.residue.index),
             residue: widget.residue,
-            length: widget.length,
             explanation: _explanation,
             onExplain: _toggleExplanation,
           ),
@@ -114,16 +113,16 @@ class _ConstraintPanelState extends State<ConstraintPanel> {
   }
 }
 
+/// The residue's name and its piece: `Gln28 · B4`, `B chain`, and a
+/// cysteine's partner. Its constraint is the level line's alone, under it.
 class _ResidueIdentity extends StatelessWidget {
   const _ResidueIdentity({
     required this.residue,
-    required this.length,
     required this.explanation,
     required this.onExplain,
     super.key,
   });
   final ResidueConstraint residue;
-  final int length;
   final bool explanation;
   final VoidCallback onExplain;
 
@@ -161,11 +160,6 @@ class _ResidueIdentity extends StatelessWidget {
               Text(residue.title, style: theme.textTheme.titleSmall),
               Text(
                 '${residue.domain}${partner == null ? '' : ' · S–S $partner'}',
-                style: theme.textTheme.bodySmall,
-              ),
-              Text(
-                'constraint ${residue.conservation.toStringAsFixed(2)} · '
-                'rank ${grouped(residue.rank)} of ${grouped(length)}',
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -228,6 +222,10 @@ class _Details extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         const SizedBox(height: 12),
+        // The one reading of the residue's constraint: its band and its
+        // number. Its rank in the protein, a second statement of the same
+        // number, left with the line that carried it (2026-11-15), as the
+        // base sheet's and the AVI and ESM-2 rows' ranks did.
         LevelPips(
           filled: switch (residue.level) {
             ConstraintLevel.high => 3,
@@ -235,6 +233,8 @@ class _Details extends StatelessWidget {
             ConstraintLevel.low => 1,
           },
           label: residue.level.label,
+          trailing: residue.conservation.toStringAsFixed(2),
+          labelKey: const ValueKey<String>('constraint-level'),
         ),
         if (explanation) ...<Widget>[
           const SizedBox(height: 12),
@@ -295,9 +295,17 @@ class _Details extends StatelessWidget {
                         '${formatScore(ranked[hidden.first].score)}',
             ),
           ),
-        Divider(height: 12, color: theme.colorScheme.outlineVariant),
-        const SizedBox(height: 6),
-        Text(residue.note, style: theme.textTheme.bodySmall),
+        // What the residue is beyond its name and its scores, where it is
+        // anything: its bridge, or the piece it goes with.
+        if (residue.facts case final String facts) ...<Widget>[
+          Divider(height: 12, color: theme.colorScheme.outlineVariant),
+          const SizedBox(height: 6),
+          Text(
+            facts,
+            key: const ValueKey<String>('constraint-facts'),
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
         ?observedEvidence,
       ],
     );
