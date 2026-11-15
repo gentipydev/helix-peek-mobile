@@ -32,7 +32,10 @@ enum TrackKind {
   /// The baked fold, as a model the last page draws.
   structure('structure'),
 
-  /// Exact-allele AVI contributions, a pilot over three genes.
+  /// Exact-allele AVI contributions, which the service bakes for insulin.
+  /// No screen reads them since 2026-11-15, when the contributions page was
+  /// removed at the user's word; the kind stays so the service's rows parse
+  /// as they always have.
   impactExplanations('impact_explanations'),
 
   /// The staged folding path the lab's morph plays (feature 7).

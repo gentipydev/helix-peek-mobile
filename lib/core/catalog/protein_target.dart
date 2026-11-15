@@ -330,7 +330,9 @@ final class ProteinTarget {
   /// holds the two to each other.
   bool get impactScored => state(TrackKind.impact) == TrackState.ready;
 
-  /// Whether exact-allele AVI contributions are included in this release.
+  /// Whether the service holds exact-allele AVI contributions for this
+  /// protein. Read by no screen since 2026-11-15 (see
+  /// [TrackKind.impactExplanations]).
   final bool impactExplanationsAvailable;
 
   /// Whether a ClinVar snapshot has been baked for this gene.

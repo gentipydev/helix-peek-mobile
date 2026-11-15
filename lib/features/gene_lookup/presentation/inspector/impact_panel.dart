@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/evidence/gene_clinvar.dart';
 import '../../../../core/evidence/gene_impact.dart';
-import '../../../../core/evidence/impact_explanations.dart';
 import '../../../../core/theme/anatomy_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../shared/clinvar/clinvar_colors.dart';
@@ -20,7 +19,7 @@ import 'coding_evidence.dart';
 /// coding base is read into is named on one plain line, its codon and its
 /// residue, rather than a second model summarised here: ESM's reading lives
 /// on the protein page, and the two models meet on the base's own AVI and
-/// ESM-2 page, a row under "Contributions ›" where the base has one.
+/// ESM-2 page, a row under the bars where the base has one.
 /// The sheet itself is [InspectorSheet], and substitution rows remain
 /// [ScoreBar].
 ///
@@ -42,8 +41,6 @@ class ImpactPanel extends StatefulWidget {
     this.onCompare,
     this.reported = const <String, ClinVarGroup>{},
     this.observedEvidence,
-    this.explanationTrack,
-    this.onOpenContributions,
     super.key,
   });
 
@@ -52,19 +49,13 @@ class ImpactPanel extends StatefulWidget {
   static const double maximumSize = InspectorSheet.maximumSize;
 
   final BaseImpact impact;
-  final GeneImpact? explanationTrack;
-
-  /// Opens every substitution's AVI contributions on a page of their own.
-  /// Offered only where [explanationTrack] explains one of them.
-  final VoidCallback? onOpenContributions;
 
   /// The codon a coding base sits in, for what each alternative makes of it.
   /// Null off the coding sequence.
   final CodingEvidence? coding;
 
   /// Opens the base's substitutions as AVI and ESM-2 each read them, side by
-  /// side, on a page of their own: a row under "Contributions ›", in its
-  /// style. Null where the base has no such page — no change to another amino
+  /// side, on a page of their own: a row under the bars. Null where the base has no such page — no change to another amino
   /// acid that both models score — and no row.
   final VoidCallback? onCompare;
 
@@ -160,8 +151,6 @@ class _ImpactPanelState extends State<ImpactPanel> {
           coding: widget.coding,
           reported: widget.reported,
           observedEvidence: widget.observedEvidence,
-          explanationTrack: widget.explanationTrack,
-          onOpenContributions: widget.onOpenContributions,
         ),
       ),
     );
@@ -285,8 +274,6 @@ class _Details extends StatelessWidget {
     this.onCompare,
     this.coding,
     this.observedEvidence,
-    this.explanationTrack,
-    this.onOpenContributions,
     super.key,
   });
 
@@ -297,8 +284,6 @@ class _Details extends StatelessWidget {
   final CodingEvidence? coding;
   final Map<String, ClinVarGroup> reported;
   final Widget? observedEvidence;
-  final GeneImpact? explanationTrack;
-  final VoidCallback? onOpenContributions;
 
   @override
   Widget build(BuildContext context) {
@@ -311,20 +296,6 @@ class _Details extends StatelessWidget {
     // there to read, but nothing about it should look as solid as a score that
     // was measured for the base under the finger.
     final double weight = impact.estimated ? 0.55 : 1;
-    // An estimate explains nothing: its scores are another base's.
-    final bool explained =
-        onOpenContributions != null &&
-        !impact.estimated &&
-        impact.ranked.any(
-          (AltScore score) =>
-              ImpactExplanationRequest.forAllele(
-                explanationTrack,
-                impact.position,
-                impact.wildtype,
-                score.base,
-              ) !=
-              null,
-        );
     // The base that is actually there. It is not a substitution and has no
     // score of its own, so it carries no bar — an empty track and a dash,
     // rather than a zero that would read as a measurement.
@@ -415,13 +386,6 @@ class _Details extends StatelessWidget {
             ],
           ),
         ),
-        if (explained)
-          _PageLink(
-            row: const ValueKey<String>('impact-contributions-open'),
-            label: 'Contributions',
-            spoken: 'Contributions to each AVI score',
-            onTap: onOpenContributions!,
-          ),
         // Where the base's changes make another amino acid, both models'
         // reading of them, in the words the ClinVar record uses for the same
         // page (the user's call, 2026-11-15: a "›" at the end of the codon
@@ -470,9 +434,11 @@ class _Details extends StatelessWidget {
       change == null || change.isEmpty ? '' : ', $change';
 }
 
-/// A way off the sheet to a page of its own — every substitution's AVI
-/// contributions, or the base's AVI and ESM-2 page — as a row: the sheet's
-/// rows that leave it, as the ClinVar line's "All ›" does.
+/// A way off the sheet to a page of its own — the base's AVI and ESM-2
+/// page — as a row: the sheet's row that leaves it, as the ClinVar line's
+/// "All ›" does. (Until 2026-11-15 a "Contributions ›" row above it opened
+/// every substitution's AVI contributions; it was removed at the user's word,
+/// with its page.)
 class _PageLink extends StatelessWidget {
   const _PageLink({
     required this.row,

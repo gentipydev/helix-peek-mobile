@@ -50,7 +50,7 @@ class SourcesNote extends StatelessWidget {
   /// yet included" is a different state and says something else (R9.3).
   final bool included;
 
-  /// The sources to write about, or null for the walk's own four — the models
+  /// The sources to write about, or null for the walk's own three — the models
   /// it draws and the snapshot it quotes, which is what this note has always
   /// been.
   ///
@@ -60,12 +60,12 @@ class SourcesNote extends StatelessWidget {
   /// screen.
   final List<SourceEntry>? sources;
 
-  /// Sources beside the walk's own four, written after them and after the
+  /// Sources beside the walk's own three, written after them and after the
   /// line that closes them: a predicted fold's, which has a licence to credit.
   /// None, as the note has always been written, unless a caller names one.
   final List<SourceEntry> also;
 
-  /// How a source's link is opened. Nothing in the walk's own four has one.
+  /// How a source's link is opened. Nothing in the walk's own three has one.
   final SourceOpener open;
 
   @override
@@ -141,12 +141,6 @@ class SourcesNote extends StatelessWidget {
               'are provided under and subject to the AlphaGenome Output Terms '
               'of Use; here they are rounded, ranked and summarised over '
               'regions.',
-        ),
-        paragraph(
-          'AVI contributions',
-          'Where included, a base’s Contributions page sets out every '
-              'signed attribution to each substitution’s raw AVI score, and '
-              'the track behind each assay. Details stay available offline.',
         ),
         paragraph(
           'ClinVar',

@@ -53,15 +53,16 @@ extension FixtureAssets on ProteinTarget {
   String get impactAsset => 'test/fixtures/impact/${slug}_avi.json';
   String get clinvarAsset => 'test/fixtures/clinvar/${slug}_clinvar.json';
   String get structureAsset => 'test/fixtures/models/$slug.glb';
-  String get impactExplanationsAsset => 'test/fixtures/impact_explanations/$slug.json';
   String? asset(TrackKind kind) => switch (kind) {
     TrackKind.record => mockAsset,
     TrackKind.constraint => constraintAsset,
     TrackKind.impact => impactAsset,
     TrackKind.clinvar => clinvarAsset,
-    TrackKind.impactExplanations => impactExplanationsAsset,
     TrackKind.structure => structureAsset,
-    TrackKind.folding || TrackKind.structureAr || TrackKind.trafficking ||
-        TrackKind.locus || TrackKind.audio => null,
+    // No screen reads the contributions since 2026-11-15, and their fixture
+    // went with them.
+    TrackKind.impactExplanations || TrackKind.folding ||
+        TrackKind.structureAr || TrackKind.trafficking || TrackKind.locus ||
+        TrackKind.audio => null,
   };
 }

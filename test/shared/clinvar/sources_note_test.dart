@@ -13,7 +13,7 @@ Future<void> _pump(WidgetTester tester, Widget note) => tester.pumpWidget(
 );
 
 void main() {
-  testWidgets('left out, it is the walk’s own four sources', (
+  testWidgets('left out, it is the walk’s own three sources', (
     WidgetTester tester,
   ) async {
     await _pump(tester, const SourcesNote(snapshotDate: '2026-09-22'));
@@ -22,7 +22,6 @@ void main() {
     for (final String lead in <String>[
       'ESM-2',
       'AVI',
-      'AVI contributions',
       'ClinVar',
     ]) {
       expect(
@@ -42,7 +41,7 @@ void main() {
       find.textContaining('snapshot 2026-09-22', findRichText: true),
       findsOneWidget,
     );
-    // Nothing in the walk's own four is a link.
+    // Nothing in the walk's own three is a link.
     expect(find.byType(InkWell), findsNothing);
   });
 

@@ -59,7 +59,7 @@ There is a useful scope trap in the INS result: the helper selects an `INS-IGF2`
 
 **First feature: “What contributes to this score?”**
 
-*Superseded for the base inspector on 2026-10-21.* The rows no longer expand: one “Contributions ›” row opens every substitution's full attribution, side by side, on a page of its own, for insulin alone (the other two pilot genes' payloads were deleted). [AVI contributions](avi-contributions.md) describes what was built; the paragraphs below are the original proposal.
+*Superseded for the base inspector on 2026-10-21, and removed on 2026-11-15:* the Contributions page described next was taken out at the user's word, to keep the app simple. The rows no longer expand: one “Contributions ›” row opens every substitution's full attribution, side by side, on a page of its own, for insulin alone (the other two pilot genes' payloads were deleted). [AVI contributions](avi-contributions.md) describes what was built; the paragraphs below are the original proposal.
 
 In an expanded ClinVar record, the allele is already unambiguous. Place a short explanation below its existing molecular evidence line, followed by an optional expansion showing the leading contributions and provenance.
 

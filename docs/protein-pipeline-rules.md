@@ -604,15 +604,14 @@ snapshot date — and only there may clinical words appear; the copy tests find
 that boundary by the `ClinVarSourced` wrapper. ESM and AVI keep their
 molecular/evolutionary wording. Hue belongs to ClinVar alone: a class colour on
 a dot, never on text, and the models' band meters are drawn in neutral ink.
-One exception, at the user's ask (2026-10-21): the AVI contributions page
-colours its four attribution groups (`ContributionColors`) in the app's own
-earth, the home helix's honey, moss, denim and clay, on a page that carries no
-ClinVar mark, each named beside its colour in the table that keys them. A
-second, at the user's ask (2026-10-22): a base's AVI and ESM-2 page marks its
-two models in the same earth, denim for AVI and clay for ESM-2
-(`AgreementColors`), on marks only and never on text, a dot and a ring that
-part by shape as well, named in the card's legend; it too carries no ClinVar
-mark. For
+One exception, at the user's ask (2026-10-22): a base's AVI and ESM-2 page
+marks its two models in the app's own earth, the home helix's denim for AVI
+and clay for ESM-2 (`AgreementColors`), on marks only and never on text, a
+dot and a ring that part by shape as well, named in the card's legend, on a
+page that carries no ClinVar mark. (The AVI contributions page, which
+coloured its four attribution groups in the same earth, was the first
+exception, from 2026-10-21 until it was removed at the user's word on
+2026-11-15, to keep the app simple: its data was heavy for what it showed.) For
 colour only, a record is grouped by its terms, which ClinVar separates with `/`
 and puts after a `;` where they are off the Mendelian axis (CFTR's
 `Pathogenic; drug response`): any pathogenic
@@ -723,15 +722,15 @@ themselves.
 **R9.5 Each fact once.** A sheet shows its own model on its bars and carries
 the other model's number in its ClinVar rows. The two numbers meet on one page,
 the one a coding base's sheet opens from its "AVI and ESM-2 ›" row, under
-"Contributions ›" and in its style, where the base has a change to another
+the bars, where the base has a change to another
 amino acid that both models score (the user's ask, 2026-10-22; until
 2026-11-15 the codon line was the link, a "›" that said nowhere where it went,
 and named the residue's ESM-2 band on AVI's sheet): it sets
 the base's substitutions' two numbers side by side, each ranked among the
 gene's single-base missense substitutions, with how far the two agree across
 the gene (`docs/avi-esm-agreement.md`). An opened record no longer repeats
-them, nor AVI's largest contributions, which are the Contributions page's
-(2026-10-25). The base sheet names its codon and residue on one plain line
+them, nor AVI's largest contributions (2026-10-25; the Contributions page
+that showed them was removed on 2026-11-15). The base sheet names its codon and residue on one plain line
 in AVI's words, `codon 90 · GGC · Gly90`. The residue sheet reads its
 constraint once, on its level line (`highly constrained · 0.96`), with no
 rank in the protein, a second statement of the same number; of its note it

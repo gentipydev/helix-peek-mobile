@@ -132,7 +132,7 @@ void main() {
   });
 
   testWidgets('the base sheet names its codon plainly, and its two models\' '
-      'page is a row of its own under Contributions', (tester) async {
+      'page is a row of its own under the bars', (tester) async {
     await _walk(tester, pages: 1);
     await _tapBase(tester, _c268);
     expect(
@@ -142,7 +142,6 @@ void main() {
     expect(_key('impact-note-link'), findsNothing);
     expect(find.textContaining('constrained'), findsNothing);
     final Finder compare = _key('impact-compare-open');
-    final Finder contributions = _key('impact-contributions-open');
     await tester.ensureVisible(compare);
     await tester.pumpAndSettle();
     expect(
@@ -151,26 +150,13 @@ void main() {
     );
     expect(tester.getSize(compare).height, greaterThanOrEqualTo(44));
     await _capture(tester, 'base-sheet-c268');
-    // Under Contributions, and in its style.
+    // Under the bars, the reference base's last; and no contributions row
+    // (removed at the user's word, 2026-11-15).
     expect(
       tester.getRect(compare).top,
-      greaterThanOrEqualTo(tester.getRect(contributions).bottom),
+      greaterThanOrEqualTo(tester.getRect(find.text('WT')).bottom),
     );
-    expect(
-      tester
-          .widget<Text>(
-            find.descendant(of: compare, matching: find.text('AVI and ESM-2')),
-          )
-          .style,
-      tester
-          .widget<Text>(
-            find.descendant(
-              of: contributions,
-              matching: find.text('Contributions'),
-            ),
-          )
-          .style,
-    );
+    expect(_key('impact-contributions-open'), findsNothing);
     await tester.tap(compare);
     await tester.pumpAndSettle();
     expect(find.text('c.268 · AVI and ESM-2'), findsOneWidget);

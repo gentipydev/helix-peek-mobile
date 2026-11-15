@@ -11,7 +11,6 @@ import '../../features/gene_lookup/domain/usecases/fetch_gene.dart';
 import '../catalog/install_id.dart';
 import '../catalog/protein_builds.dart';
 import '../catalog/protein_resolver.dart';
-import '../evidence/impact_explanation_repository.dart';
 import '../network/api_client.dart';
 import '../network/track_client.dart';
 import '../network/track_source.dart';
@@ -48,10 +47,6 @@ List<RepositoryProvider<Object>> buildAppProviders({
     RepositoryProvider<GeneRemoteDataSource>(
       create: (BuildContext context) =>
           TrackGeneDataSource(context.read<TrackSource>()),
-    ),
-    RepositoryProvider<ImpactExplanationRepository>(
-      create: (BuildContext context) =>
-          ImpactExplanationRepository(context.read<TrackSource>()),
     ),
     RepositoryProvider<GeneRepository>(
       create: (BuildContext context) =>

@@ -139,7 +139,7 @@ const TextStyle _mono = TextStyle(
   fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
 );
 
-/// How wide the base's letter stands, as the Contributions page sets it.
+/// How wide the base's letter stands in the page's header.
 const double _letter = 26;
 
 /// Room between the two columns of numbers.

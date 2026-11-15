@@ -27,14 +27,16 @@ void main() {
     await _pump(tester, const SourcesNote(snapshotDate: '2026-09-22'));
 
     expect(const SourcesNote().also, isEmpty);
-    // The walk's four paragraphs and the line that closes them: nothing after.
+    // The walk's three paragraphs and the line that closes them: nothing
+    // after. (Four until 2026-11-15, when AVI contributions went with their
+    // page.)
     final List<Widget> written = _written(tester);
-    expect(written, hasLength(5));
+    expect(written, hasLength(4));
     expect((written.last as Text).data, _closing);
     expect(find.byType(InkWell), findsNothing);
   });
 
-  testWidgets('a source named beside the four is written after them all', (
+  testWidgets('a source named beside the three is written after them all', (
     WidgetTester tester,
   ) async {
     final List<Uri> opened = <Uri>[];
@@ -57,10 +59,10 @@ void main() {
       ),
     );
 
-    // The four and their closing line are untouched, and still in place.
+    // The three and their closing line are untouched, and still in place.
     final List<Widget> written = _written(tester);
-    expect(written, hasLength(7));
-    expect((written[4] as Text).data, _closing);
+    expect(written, hasLength(6));
+    expect((written[3] as Text).data, _closing);
     for (final String lead in <String>['ESM-2', 'AVI', 'ClinVar']) {
       expect(find.textContaining(lead, findRichText: true), findsWidgets);
     }

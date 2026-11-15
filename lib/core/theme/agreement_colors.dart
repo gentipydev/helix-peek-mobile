@@ -4,10 +4,11 @@ import 'nucleotide_colors.dart';
 
 /// The two models of a base's AVI and ESM-2 page, one hue each.
 ///
-/// After the contributions page, the second place on the walk a model's
-/// numbers wear hue, and like it at the user's ask (2026-10-22), on a page
-/// that carries no ClinVar mark, so R9.1's hues stay ClinVar's everywhere
-/// they could be read as clinical. The hues are the app's own earth
+/// The one place on the walk a model's numbers wear hue, at the user's ask
+/// (2026-10-22), on a page that carries no ClinVar mark, so R9.1's hues stay
+/// ClinVar's everywhere they could be read as clinical. (The AVI
+/// contributions page was the other, until it was removed at the user's word
+/// on 2026-11-15.) The hues are the app's own earth
 /// ([NucleotideColors.helix]): denim for AVI, clay for ESM-2.
 ///
 /// The pair was settled by the dataviz skill's validator, on both grounds the

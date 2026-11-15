@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import 'gene_clinvar.dart';
 import 'gene_impact.dart';
-import 'impact_explanations.dart';
 import 'protein_constraint.dart';
 
 /// How the two models read one record's exact change, in molecular words.
@@ -43,14 +42,12 @@ final class VariantEvidence {
     this.avi,
     this.esm,
     this.residue,
-    this.explanation,
   });
 
   final ClinVarVariant variant;
 
   /// The exact alternative's AVI Phred.
   final double? avi;
-  final ImpactExplanationRequest? explanation;
 
   /// The alternative amino acid's ESM score, for a missense record.
   final SubstitutionScore? esm;
@@ -158,16 +155,12 @@ final class VariantEvidence {
     ({String label, int order}) Function(int position) nonCoding,
   ) {
     final double? avi = v.aviScore(impact?.at(v.position));
-    final ImpactExplanationRequest? explanation = avi == null
-        ? null
-        : ImpactExplanationRequest.forAllele(impact, v.position, v.ref, v.alt);
     final int? number = v.residue;
     if (number == null) {
       final ({String label, int order}) piece = nonCoding(v.position);
       return VariantEvidence(
         variant: v,
         avi: avi,
-        explanation: explanation,
         section: piece.label,
         protein: false,
         order: piece.order,
@@ -181,7 +174,6 @@ final class VariantEvidence {
     return VariantEvidence(
       variant: v,
       avi: avi,
-      explanation: explanation,
       esm:
           residue == null ||
               alt == null ||

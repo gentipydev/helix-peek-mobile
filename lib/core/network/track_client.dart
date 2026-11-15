@@ -26,8 +26,8 @@ import 'track_source.dart';
 /// and remembered. A catalog page carries each family's *state* and no URL, so
 /// the walk cannot fetch anything off the row it was routed with; this is the
 /// second call that turns a state into an address. A failure is forgotten
-/// rather than remembered, the way `ImpactExplanationRepository` forgets one:
-/// the service cold-starts in about forty-four seconds, and a reader who comes
+/// rather than remembered: the service cold-starts in about forty-four
+/// seconds, and a reader who comes
 /// back to the page deserves a second attempt rather than the first failure for
 /// the life of the process.
 final class TrackClient implements TrackSource {

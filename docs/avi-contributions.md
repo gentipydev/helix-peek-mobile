@@ -1,5 +1,16 @@
 **AVI contributions**
 
+> **Removed 2026-11-15, at the user's word** ("I should remove the
+> contributions even for insulin to keep my app simple because the
+> contributions are really data-heavy"). The app no longer has the base
+> sheet's "Contributions ›" row, the page, `ContributionColors`,
+> `ImpactExplanationRepository`, the `impact_explanations` parser or
+> insulin's fixture. `TrackKind.impactExplanations` and
+> `ProteinTarget.impactExplanationsAvailable` stay, so the service's rows
+> parse as before; no screen reads them. The backend's bake, its route and
+> insulin's stored object are untouched until the user decides. What
+> follows is the record of the feature as it was.
+
 A base sheet whose substitutions are explained ends its rows with one line,
 “Contributions ›”. It opens a page of its own, rising over the walk as the
 ClinVar list does, with every substitution at that base side by side and what

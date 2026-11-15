@@ -2,7 +2,7 @@
 
 A coding base's sheet names its codon and residue in one line,
 `codon 90 · GGC · Gly90 · highly constrained ›`. Since 2026-10-22 that line
-opens a page of its own, rising over the walk as the Contributions page does:
+opens a page of its own, rising over the walk as the ClinVar list does:
 the base's three substitutions as AVI and ESM-2 each read them, ranked in the
 gene. × closes it back onto the sheet.
 
@@ -439,8 +439,9 @@ coding bases and plain text on the other 259; the "›" did not say where it
 went, and the line carried the residue's ESM-2 band, unlabelled, on AVI's
 sheet. Now the line is plain on every base and in AVI's words alone,
 `codon 90 · GGC · Gly90`, and the page is a row of its own, "AVI and ESM-2 ›",
-the words a ClinVar record uses for it, under "Contributions ›" and in that
-row's style (`impact-compare-open`). The row is there where the line was a
+the words a ClinVar record uses for it, under the bars (`impact-compare-open`;
+under "Contributions ›" and in its style until that row and its page were
+removed, the same day, at the user's word). The row is there where the line was a
 link: a base with at least one change to another amino acid that both models
 score (`AgreementRow.anyAt`). The page's own card keeps the line with the
 band, `codon 90 · GGC · Gly90 · highly constrained`: there ESM-2 is one of the

@@ -211,8 +211,9 @@ void main() {
     await _openTranscript(tester);
     await _tapCell(tester, 30);
     final ImpactPanel panel = tester.widget<ImpactPanel>(_panel);
-    // Insulin's substitutions are explained on a page of their own, so no row
-    // opens in place and none keeps a chevron's column.
+    // No row opens in place and none keeps a chevron's column; the page of
+    // every substitution's contributions that replaced them is gone too, at
+    // the user's word (2026-11-15).
     for (final AltScore score in panel.impact.ranked) {
       expect(
         find.byKey(ValueKey<String>('impact-explain-${score.base}')),
@@ -221,7 +222,7 @@ void main() {
     }
     expect(
       find.byKey(const ValueKey<String>('impact-contributions-open')),
-      findsOneWidget,
+      findsNothing,
     );
     final List<Rect> tracks = <Rect>[
       for (final Element bar in find

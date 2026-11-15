@@ -16,8 +16,6 @@ import 'package:helixpeek/core/catalog/protein_target.dart';
 import 'package:helixpeek/core/catalog/protein_track.dart';
 import 'package:helixpeek/core/evidence/gene_clinvar.dart';
 import 'package:helixpeek/core/evidence/gene_impact.dart';
-import 'package:helixpeek/core/evidence/impact_explanation_repository.dart';
-import 'package:helixpeek/core/evidence/impact_explanations.dart';
 import 'package:helixpeek/core/evidence/protein_constraint.dart';
 import 'package:helixpeek/core/network/api_client.dart';
 import 'package:helixpeek/core/network/api_exception.dart';
@@ -109,32 +107,6 @@ void main() {
     expect(held, greaterThan(30 * 1024 * 1024));
     await GeneClinVar.load(catalog.bySlug('dystrophin')!, tracks: tracks);
   }, timeout: const Timeout(Duration(minutes: 10)));
-
-  test('AVI explanations use the same validated contract over HTTP', () async {
-    if (baseUrl.isEmpty) {
-      markTestSkipped('set LIVE_BACKEND to run against a live backend');
-      return;
-    }
-    final tracks = TrackClient(
-      DioApiClient(baseUrl: baseUrl, timeout: const Duration(seconds: 30)),
-    );
-    final repository = ImpactExplanationRepository(tracks);
-    for (final target in catalog.all.where(
-      (t) => t.impactExplanationsAvailable,
-    )) {
-      final track = await GeneImpact.load(target, tracks: tracks);
-      final data = await repository.load(track);
-      final base = track.at(track.start)!;
-      final request = ImpactExplanationRequest.forAllele(
-        track,
-        base.position,
-        base.wildtype,
-        base.ranked.first.base,
-      )!;
-      expect(data.at(request), isNotNull);
-      expect(data.atlasUrl(request).host, 'deepmind.google.com');
-    }
-  });
 
   test('fetches human insulin through the real client stack', () async {
     if (baseUrl.isEmpty) {

@@ -43,7 +43,6 @@ import '../constraint/constraint_panel.dart';
 import '../constraint/constraint_toolbar.dart';
 import '../inspector/agreement_page.dart';
 import '../inspector/coding_evidence.dart';
-import '../inspector/contributions_page.dart';
 import '../inspector/gene_agreement.dart';
 import '../inspector/impact_panel.dart';
 import 'anatomy_canvas.dart';
@@ -426,7 +425,6 @@ class _AnatomyScreenState extends State<AnatomyScreen>
   /// and a residue compared in it keeps it that way.
   bool _sheetLanded = false;
   bool _overviewOpen = false;
-  bool _contributionsOpen = false;
   bool _agreementOpen = false;
 
   /// Where the overview was left, for as long as this gene is shown.
@@ -709,48 +707,9 @@ class _AnatomyScreenState extends State<AnatomyScreen>
     }
   }
 
-  /// Every substitution's AVI contributions at [impact]'s base, as a page
-  /// that rises over the walk, its sheet still open under it, as the ClinVar
-  /// list does from the same sheet.
-  Future<void> _openContributions({
-    required GeneImpact track,
-    required BaseImpact impact,
-    required String address,
-    required String region,
-    required String detail,
-    required Color tint,
-    CodingEvidence? coding,
-  }) async {
-    if (_contributionsOpen) {
-      return;
-    }
-    final CapturedThemes themes = _routeThemes();
-    _contributionsOpen = true;
-    try {
-      await Navigator.of(context).push<void>(
-        riseRoute<void>(
-          context,
-          (BuildContext context) => themes.wrap(
-            ContributionsPage(
-              track: track,
-              impact: impact,
-              address: address,
-              region: region,
-              detail: detail,
-              tint: tint,
-              coding: coding,
-            ),
-          ),
-        ),
-      );
-    } finally {
-      _contributionsOpen = false;
-    }
-  }
-
   /// A base's substitutions as AVI and ESM-2 each read them, ranked in the
   /// gene, on a page that rises over the walk, its sheet or the ClinVar list
-  /// still open under it, as the Contributions page does from the sheet.
+  /// still open under it, as the list does from the same sheet.
   Future<void> _openAgreement({
     required GeneImpact track,
     required BaseImpact impact,
@@ -1243,27 +1202,9 @@ class _AnatomyScreenState extends State<AnatomyScreen>
     if (facts == null) {
       return null;
     }
-    final GeneImpact? explained = facts.explained;
-    final BaseImpact reading = facts.reading;
     return ImpactPanel(
       key: const ValueKey<String>('impact-panel'),
-      impact: reading,
-      explanationTrack: explained,
-      onOpenContributions: explained == null
-          ? null
-          : () => unawaited(
-              _openContributions(
-                track: explained,
-                impact: reading,
-                address: facts.where,
-                region: facts.region,
-                // Where the base sits, without the constraint band the sheet
-                // adds: that is ESM's, and this page is AVI's.
-                detail: facts.place,
-                tint: facts.tint,
-                coding: facts.evidence,
-              ),
-            ),
+      impact: facts.reading,
       observedEvidence: _clinvarBlock(position: position, scope: facts.where),
       reported: _reported(
         _evidenceAt(position: position),
