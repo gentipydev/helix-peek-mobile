@@ -65,8 +65,9 @@ Dropout is off so that the forward pass drawn is the forward pass trained.
 
 Each is a painter in `lib/features/peptide_lm/presentation/scenes/`, a pure
 function of the frame, at the checkpoint picked ("Step N ▾"); the loop plays
-every step. A tap on a stage plays it once, a beat every two seconds, and it
-holds on its last frame until another is tapped, or the same one again.
+every step. A tap on a stage plays it once, at its own pace (see "Pace,
+strings, numbers and outlines" below), and it holds on its last frame until
+another is tapped, or the same one again.
 Beside the caption, a player of that stage alone: Replay, and Play/Pause.
 The stage bar keeps its names at full size and scrolls sideways where a
 phone is too narrow for all twelve; a stage played whose name stands partly
@@ -1250,6 +1251,75 @@ Left as they are: the stage bar's hard edge (a fade would cover the end of
 a stage's name that `_reveal` brings just into view), a ▾ beside "Step N"
 (it would cost the title its room), the caption's 20 pt margin against the
 canvas's 4, and the mixed case of the canvas's notes (words, not the frame).
+
+## Pace, strings, numbers and outlines
+
+On 2026-11-15 the user asked for the flow to be easier to follow with fewer
+transformations landing at once: every stage at least twice as slow, the
+speed by each stage's complexity; no pale web of strings at the end of a
+flow (Predict's "368 weights" hold, in their screenshot), stronger colour on
+thinner strings, or the strings gone once not needed; numbers in matrices
+slightly bigger and bolder; and a look for any border drawn over another
+("leave the borders as they are"). What the analysis found, from every
+caption and beat of the real run (`peptide_lm_words_check`), 60 frames and
+every stroke site:
+
+- The forward pass flashed by: most captions of Scores, Attention,
+  Feed-forward and Predict showed 1.4–2.4 s ("Less the mean" 0.7 beat),
+  while Backward and Update already held about 4 s; several captions carried
+  7–9 motions at once.
+- The strings left as a row flows were half strength and 0.5–1.8 pt wide,
+  so hundreds crossing hazed into a pale web; Backward kept its web 3 beats
+  after the gradient was made, Update 367 dimmed strings behind the worked
+  one, Feed-forward its first layer through the outputs and a 15% web
+  behind each worked neuron.
+- Numbers on tiles were 5.5–7 pt Regular, fitted with 2 pt to spare.
+- Outlines over outlines: Backward's honey frame round empty slots, its
+  honey rings half a point inside honey frames (read extremes, the climb's
+  worked tiles), its homing row's honey frame crossing the green outline;
+  Attention's worked goal slot, grey inside green; Feed-forward's worked
+  neuron, a ring round an outlined node; Embedding's twins next to each
+  other, two edges stacked.
+
+What changed:
+
+- **Pace** (`domain/stage_pace.dart`, `TrainingRunView.paceOf`): every
+  beat at least 4 s, twice the old 2; every caption on screen at least
+  2 s + 1 s for every 14 characters (5–8 s), its motions slowed evenly; the
+  speed eased over 0.15 beat either side of a change, which keeps each
+  side's time. Worked out from the stage's captions when it plays (sampled
+  every sixteenth of a beat, narrowed to a thousandth; under 10 ms), kept
+  for that play. Frames at a point of a stage are unchanged, so every pixel
+  proof stands. On the real run, step 1: Tokenise 22 → 48 s, Shift 10 → 25,
+  Embedding 30 → 66, Scores 40 → 103, Attention 50 → 124, Feed-forward
+  40 → 96, Forward 24 → 53, Predict 28 → 72, Loss 34 → 69, Backward
+  88 → 176, Update 78 → 157, Loop 88 → 177: 8.9 → 19.4 minutes.
+- **Strings** (`drawEdges`, `WeightFlow.webStrength` 0.5 → 0.85): 0.35–1.1
+  pt, alpha 0.03 + 0.92·w^1.7, the strongest in nearly full colour, the
+  weakest all but gone. The holds that name the weights keep their web,
+  clear. Backward's web goes once its gradient is made (24.0–24.4);
+  Update's other 367 strings go as the worked one lights; Feed-forward's
+  inputs' edges go as the outputs' come, and a worked neuron keeps only its
+  16 edges.
+- **Numbers**: JetBrains Mono Medium on the whole canvas
+  (`LmKit.numberWeight`, the user's pick over tiles only); a number across
+  a tile leaves half a point free (`numberSlack`, was 2), so tables, maps
+  and ladders write half a point larger where the cell allows (Pro Max
+  6.5 → 7 pt, 402 wide 6 → 6.5, 375 wide 5.5 → 6); ids half a point
+  larger (`idGrowth`). Scores' worked card keeps its size: its tiles were
+  already fitted tight, and half a point more crossed their edges.
+- **Outlines**: Backward's gradient column is framed only once made; its
+  read extremes and the climb's worked number are written in honey, as
+  Update's worked weight is (the rings, the last in the flow, are gone);
+  its homing row's frame is gone before the green outline comes;
+  Attention's goal slot is its green frame alone; Feed-forward's worked
+  neuron's own outline turns to the accent; twins next to each other share
+  one edge (`lm_outlines_test`); Attention's query slice is outlined as
+  every other accent outline, 1.2 pt at 85%.
+
+Offered, not done: untangling the busiest moments so one thing moves at a
+time (Scores 0.95–2.5 and 13.5–14.8, Attention 16.3–17.9, Forward 0–1.6,
+Predict 10.6–12.8, Update 0–3.6, 8.1–9.9 and 24–26).
 
 ## Colours
 

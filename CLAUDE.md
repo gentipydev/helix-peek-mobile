@@ -197,9 +197,18 @@ for it (a stage played whose name is partly out of view is scrolled just
 far enough to show it whole, the bar's inset beyond it). The bar stands
 `TrainingRunView.barInset` (12) in from either end and up from the safe
 area, so with a name's own 8 its first and last names stand 20 from the
-edge, as the caption does (the user's ask of 2026-11-14). A tap on a stage plays it once from its start, at the page's one
-speed, a beat every two seconds (`TrainingRunView.beat`, the old 0.5×), and
-it holds on its last frame (`TrainingTimeline.frameIn`); nothing runs on
+edge, as the caption does (the user's ask of 2026-11-14). A tap on a stage plays it once from its start, at its own
+pace (`StagePace`, worked out by `TrainingRunView.paceOf` from the stage's
+own captions when it plays, and kept for that play; the user's ask of
+2026-11-15, "at least twice slower", the denser stages slower still): every
+beat takes at least four seconds, twice the two it once took, and every
+caption stays on screen at least as long as it takes to read it and watch
+its change, two seconds and one for every fourteen characters, five to
+eight, the motions under it slowed evenly, the speed easing over 0.15 beat
+either side of a caption's change. The run's stages so take 8.9 minutes →
+19.4 in all: Scores and Predict about 2.6× as long, Backward, Update and
+Loop 2×. A frame at a given point of a stage is what it was. The stage
+holds on its last frame (`TrainingTimeline.frameIn`); nothing runs on
 into the next stage, and a tap on the stage on screen plays it again. A
 sideways swipe over the canvas plays the next stage (leftwards) or the one
 before, as a tap on its name does, at the walk's thresholds (48 pt, more
@@ -299,8 +308,10 @@ showed a block 2); block 2 is Forward's:
   weight, a dot at each tip, the number made only as they land (the query's
   first alone and slowly, the rest in a cascade; the key's and the value's
   one cascade each), the later strings passing behind the columns already
-  made. Landed strings stay, faint, a weight on each (colour its sign,
-  strength its size), until the next part's slots come: the part's 16 × 16
+  made. Landed strings stay, fine and clear, a weight on each (colour its
+  sign, strength its size, steeply: the weakest all but gone, so hundreds
+  crossing never haze into a pale web, `drawEdges`; the user's ask of
+  2026-11-15), until the next part's slots come: the part's 16 × 16
   weights, named on a plate under them, `block 1 · query weights · 16 × 16`, with where
   they stand, `random start (seed 0), no update yet` at step 1 and
   `random start (seed 0), then N training updates` later. Each column then parts into a slice a head (head 1
@@ -391,8 +402,9 @@ showed a block 2); block 2 is Forward's:
   input × weight. Then GELU is worked out (the user's asks of 2026-11-01:
   the explanations as clear as they can be, GELU said; taken out for a
   note and a small curve, then wanted back to see how GELU is worked
-  out): the brightest neuron's 16 lines stand out, a dot running once along
-  each, GELU's curve beside them from then on, and the caption gives its
+  out): the brightest neuron's 16 lines alone stay (the rest come back for
+  every neuron at once), its node outlined in the accent, a dot running
+  once along each, GELU's curve beside them from then on, and the caption gives its
   sum (`FeedForwardScene.sums`: the evened row × its
   weights + its bias, from the run); GELU's curve is drawn right of the
   neurons, where the outputs will be, its line in the accent (`GeluChart`,
@@ -403,8 +415,8 @@ showed a block 2); block 2 is Forward's:
   input, and the curve its line alone (the user's word: no points on it). Notes say
   what a line is (weights' random start or updates since), what a weighted
   sum is, what GELU is, and why the bend (without it the two layers are
-  one weighted sum). Then come the 16 outputs (each output's dot along its
-  strongest neuron; no GELU), which lie back down onto the row, and what
+  one weighted sum). Then come the 16 outputs, the inputs' lines going as
+  theirs come (each output's dot along its strongest neuron; no GELU), which lie back down onto the row, and what
   every place gains, alone, then added: block 1's output. 20 beats.
 - **Forward** (`forward_scene.dart`), the place in focus's row through the
   whole pass, layer to layer, down the canvas (`TowerLayout`; the user's ask
@@ -453,7 +465,8 @@ tile beside it, in id order, under the plate `output layer · 23 × 16`. The
 row flows through the output layer's weights as Scores' row goes through the
 query's (`weight_flow.dart`): the top logit alone and slowly, its caption the
 sum (insulin A's C11 at step 1: K, 1.00), then the other 22 in one cascade,
-the 368 strings left faint. `<pad>` and `<bos>` are struck to −∞, the bench
+the 368 strings left behind, fine and clear (the user's screenshot of
+2026-11-15 asked for no pale web). `<pad>` and `<bos>` are struck to −∞, the bench
 clears and the logits slide left; softmax is worked out in two steps, each bar
 growing to e to its logit, the largest across the room (e to K's 1.00 is
 2.72; at step 200 e to S's 9.14 is 9,318 and the rest vanish), then every bar
@@ -535,10 +548,14 @@ the rows of the two tokens that never come next, naming each colour of
 p − y as it comes and their sum to 0; the first gradient number worked out
 in a box beside its strings (the three tokens bringing most, error × weight,
 the rest, the sum); the gradient read, its most negative and positive
-numbers ringed; the strongest string's error × number written on it; and at
-each + of the climb one number worked out beside the part's name, its three
-tiles ringed (`number 10: −0.17 + 0.02 = −0.15`, without "number" where only
-that fits), the final LayerNorm's spread beside its own. It opens
+numbers written in honey; the strongest string's error × number written on it; and at
+each + of the climb one number worked out beside the part's name, that
+number written in honey in the rows under and over the +
+(`number 10: −0.17 + 0.02 = −0.15`, without "number" where only
+that fits), the final LayerNorm's spread beside its own. Nothing is ringed
+inside a frame (the user's check of 2026-11-15 for an outline drawn over
+another: the honey rings that marked these sat half a point inside the
+honey frames). It opens
 on Loss's last frame, pixel for pixel (`LossScene.paintEnd`, `LossFade`,
 whose `zoom` takes the line in focus back out of the batch): the other lines,
 the card, the mean's line and the legend go, and the line in focus grows back
@@ -554,7 +571,9 @@ as Predict stood it, with empty slots for its gradient beside it, and the
 errors run back along the output layer's strings (`weight_flow.dart`, the
 closures transposed, the tips in the loss's honey): the largest number of the
 gradient alone (insulin A's C11 at step 1: number 10, −0.32), the rest in a
-cascade, then the gradient read, its extremes ringed. Two mini-steps after it,
+cascade; the strings go once it is made, and the column is framed in honey
+only then, never round its empty slots; then the gradient read, its
+extremes in honey. Two mini-steps after it,
 each string relit by its own weight's gradient (error × the number at its
 start) and then by the batch's mean, were cut at the user's word the same
 night: the same strings again, ending on the gradient column while the
@@ -592,8 +611,8 @@ what the output layer read, comes in where it was, under the tag
 bench's left column, as Predict stands it, while p − y comes in where the
 logits were made (`BackwardScene.drawLastRow`, `drawErrors`,
 `PredictScene.drawPlate`, promoted) and then the 368 strings between them,
-faint, drawn from the row's numbers, each a weight. One string is worked, the
-place's largest error × number (insulin A's C11 at step 1: S's from number
+fine and clear, drawn from the row's numbers, each a weight. One string is
+worked, the other 367 going as it lights, the place's largest error × number (insulin A's C11 at step 1: S's from number
 6, `−0.99 × 1.94 = −1.92` written on it from the written factors): a
 weight's gradient is the error at its end times the number at its start.
 Then the same weight at every place (the user's pick over every place's
@@ -706,7 +725,14 @@ brief; `peptide-lm.md`'s Info pages keep each page's record.
 Its colours are the theme's (`LmInks`, held by `lm_inks_test`): the accent
 for what flows forward, the tracer for what came next, the helix's honey for
 the loss and what flows back, and the helix's denim and clay, from the base
-tile at zero, for every signed number. `docs/design/peptide-lm.md` has the
+tile at zero, for every signed number. Its ids, numbers and letters are
+JetBrains Mono Medium (`LmKit.numberWeight`), and a number written across a
+tile leaves only half a point of it free (`numberSlack`; ids half a point
+larger, `idGrowth`): the user's ask of 2026-11-15, numbers slightly bigger
+and bolder (6.5 → 7 pt in a Pro Max's tables). No outline is drawn over
+another (the user's check of the same day): where two would meet they share
+an edge, as two places of one token next to each other do in Embedding, or
+one gives way (`lm_outlines_test`). `docs/design/peptide-lm.md` has the
 design.
 
 ## Zoom (`lib/features/zoom/`)
