@@ -53,8 +53,6 @@ void main() {
     expect(target.chains.map((c) => c.node), ['chainA', 'chainB', 'bonds']);
     expect(catalog.bySlug('p53')!.structure!.modelled, (96, 289));
     expect(catalog.bySlug('hemoglobin')!.chain, 'hemoglobin beta chain');
-    expect(target.impactExplanationsAvailable, isTrue);
-    expect(catalog.bySlug('p53')!.impactExplanationsAvailable, isFalse);
     for (final query in ['p01308', 'NG_012232', 'TP53', 'hormone', 'hemo', 'none']) {
       expect(catalog.matching(query), TestCatalog.matching(query));
     }
@@ -119,18 +117,16 @@ void main() {
     expect(catalog.status.value, CatalogStatus.ready);
   });
 
-  test('null chrome and absent explanations are legitimate served states', () async {
+  test('null chrome is a legitimate served state', () async {
     final page = catalogFixture();
     final row = (page['proteins'] as List).first as Map<String, dynamic>;
     row['structure'] = null;
     row['chains'] = <dynamic>[];
-    (row['tracks'] as Map)['impact_explanations'] = 'absent';
     api.answer = (_, _) async => page;
     await catalog.refresh();
     final target = catalog.bySlug(row['slug'] as String)!;
     expect(target.structure, isNull);
     expect(target.chains, isEmpty);
-    expect(target.impactExplanationsAvailable, isFalse);
     expect(catalog.all, hasLength((catalogFixture()['proteins'] as List).length));
   });
 

@@ -4,12 +4,14 @@
 > contributions even for insulin to keep my app simple because the
 > contributions are really data-heavy"). The app no longer has the base
 > sheet's "Contributions ›" row, the page, `ContributionColors`,
-> `ImpactExplanationRepository`, the `impact_explanations` parser or
-> insulin's fixture. `TrackKind.impactExplanations` and
-> `ProteinTarget.impactExplanationsAvailable` stay, so the service's rows
-> parse as before; no screen reads them. The backend's bake, its route and
-> insulin's stored object are untouched until the user decides. What
-> follows is the record of the feature as it was.
+> `ImpactExplanationRepository`, the `impact_explanations` parser,
+> insulin's fixture, `TrackKind.impactExplanations` or
+> `ProteinTarget.impactExplanationsAvailable`, and the catalog fixture no
+> longer lists the kind. The same day, at the user's word ("clean up
+> everything"), the backend lost the bake, its check, the route, the kind
+> from the service's tracks and the curated catalog, and the live rows and
+> insulin's stored object were deleted. What follows is the record of the
+> feature as it was.
 
 A base sheet whose substitutions are explained ends its rows with one line,
 “Contributions ›”. It opens a page of its own, rising over the walk as the

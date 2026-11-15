@@ -12,7 +12,7 @@ library;
 
 /// The families a protein can carry, named as the service names them.
 ///
-/// The walk reads the first six. The last five belong to the lab's features and
+/// The walk reads the first five. The last five belong to the lab's features and
 /// were added together so that no later session reopens this file. Each
 /// arrives on the service with its own migration, and until then no row names
 /// it. A kind the walk never asks for changes nothing it draws.
@@ -31,12 +31,6 @@ enum TrackKind {
 
   /// The baked fold, as a model the last page draws.
   structure('structure'),
-
-  /// Exact-allele AVI contributions, which the service bakes for insulin.
-  /// No screen reads them since 2026-11-15, when the contributions page was
-  /// removed at the user's word; the kind stays so the service's rows parse
-  /// as they always have.
-  impactExplanations('impact_explanations'),
 
   /// The staged folding path the lab's morph plays (feature 7).
   folding('folding'),

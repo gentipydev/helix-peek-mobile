@@ -52,7 +52,6 @@ ProteinTarget withLocus(
   chains: target.chains,
   structure: target.structure,
   chain: target.chain,
-  impactExplanationsAvailable: target.impactExplanationsAvailable,
   tracks: <TrackKind, TrackRef>{
     ...target.tracks,
     TrackKind.locus: TrackRef(state: state, reason: reason),

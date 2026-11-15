@@ -59,10 +59,7 @@ extension FixtureAssets on ProteinTarget {
     TrackKind.impact => impactAsset,
     TrackKind.clinvar => clinvarAsset,
     TrackKind.structure => structureAsset,
-    // No screen reads the contributions since 2026-11-15, and their fixture
-    // went with them.
-    TrackKind.impactExplanations || TrackKind.folding ||
-        TrackKind.structureAr || TrackKind.trafficking || TrackKind.locus ||
-        TrackKind.audio => null,
+    TrackKind.folding || TrackKind.structureAr || TrackKind.trafficking ||
+        TrackKind.locus || TrackKind.audio => null,
   };
 }

@@ -39,8 +39,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -82,8 +81,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -121,8 +119,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -163,8 +160,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -206,8 +202,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -245,8 +240,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -284,8 +278,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -331,8 +324,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "ready"
+        "structure": "ready"
       }
     },
     {
@@ -374,8 +366,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -417,8 +408,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -456,8 +446,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -499,8 +488,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -541,8 +529,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -584,8 +571,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -631,8 +617,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -674,8 +659,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -717,8 +701,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -760,8 +743,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -799,8 +781,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -842,8 +823,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -881,8 +861,7 @@
         "constraint": "absent",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -920,8 +899,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -963,8 +941,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1006,8 +983,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1049,8 +1025,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1088,8 +1063,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1131,8 +1105,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1170,8 +1143,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1213,8 +1185,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1259,8 +1230,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1302,8 +1272,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1341,8 +1310,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1384,8 +1352,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1423,8 +1390,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1462,8 +1428,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1501,8 +1466,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1540,8 +1504,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1583,8 +1546,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1622,8 +1584,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1665,8 +1626,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1711,8 +1671,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1754,8 +1713,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1797,8 +1755,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1836,8 +1793,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1882,8 +1838,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1921,8 +1876,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -1964,8 +1918,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -2007,8 +1960,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -2053,8 +2005,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -2092,8 +2043,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -2135,8 +2085,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -2174,8 +2123,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -2220,8 +2168,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     },
     {
@@ -2266,8 +2213,7 @@
         "constraint": "ready",
         "impact": "ready",
         "clinvar": "ready",
-        "structure": "ready",
-        "impact_explanations": "absent"
+        "structure": "ready"
       }
     }
   ],

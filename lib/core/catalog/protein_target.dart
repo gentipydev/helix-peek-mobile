@@ -233,7 +233,6 @@ final class ProteinTarget {
     required this.chains,
     required this.structure,
     this.chain,
-    this.impactExplanationsAvailable = false,
     this.tracks = const <TrackKind, TrackRef>{},
     this.regions = const <ProteinRegion>[],
   });
@@ -259,7 +258,6 @@ final class ProteinTarget {
       ],
       structure: chrome == null ? null : StructureChrome.fromJson(chrome),
       chain: json['chain'] as String?,
-      impactExplanationsAvailable: _ready(tracks, TrackKind.impactExplanations),
       tracks: tracks,
       regions: <ProteinRegion>[
         for (final dynamic region
@@ -268,9 +266,6 @@ final class ProteinTarget {
       ],
     );
   }
-
-  static bool _ready(Map<TrackKind, TrackRef> tracks, TrackKind kind) =>
-      tracks[kind]?.state == TrackState.ready;
 
   /// URL-safe, and the stem of every asset this target owns.
   final String slug;
@@ -329,11 +324,6 @@ final class ProteinTarget {
   /// `impact_scored` in `pipeline/targets.py` says the same, and `check_assets.py`
   /// holds the two to each other.
   bool get impactScored => state(TrackKind.impact) == TrackState.ready;
-
-  /// Whether the service holds exact-allele AVI contributions for this
-  /// protein. Read by no screen since 2026-11-15 (see
-  /// [TrackKind.impactExplanations]).
-  final bool impactExplanationsAvailable;
 
   /// Whether a ClinVar snapshot has been baked for this gene.
   ///
