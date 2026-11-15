@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -47,7 +48,10 @@ Future<void> _overview(
       debugShowCheckedModeBanner: false,
       builder: (BuildContext context, Widget? child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(disableAnimations: !motion),
-        child: child!,
+        child: RepaintBoundary(
+          key: const ValueKey<String>('capture'),
+          child: child!,
+        ),
       ),
       home: Builder(
         builder: (BuildContext context) => Scaffold(
@@ -108,6 +112,27 @@ ScrollPosition _scroll(WidgetTester tester) => tester
     )
     .position;
 
+
+/// Writes the screen to `$SHOT_DIR/<name>.png`, where SHOT_DIR is set.
+Future<void> _capture(WidgetTester tester, String name) async {
+  final String? folder = Platform.environment['SHOT_DIR'];
+  if (folder == null) {
+    return;
+  }
+  final RenderRepaintBoundary boundary = tester.renderObject(
+    find.byKey(const ValueKey<String>('capture')),
+  );
+  await tester.runAsync(() async {
+    final ui.Image shot = await boundary.toImage(pixelRatio: 2);
+    final ByteData bytes = (await shot.toByteData(
+      format: ui.ImageByteFormat.png,
+    ))!;
+    Directory(folder).createSync(recursive: true);
+    File('$folder/$name.png').writeAsBytesSync(bytes.buffer.asUint8List());
+    shot.dispose();
+  });
+}
+
 /// The first region's heading: the page under the strip.
 Rect _underStrip(WidgetTester tester) =>
     tester.getRect(_key('variants-section-toggle-Signal peptide@1'));
@@ -152,6 +177,9 @@ void main() {
       expect(card.right, 390 - 16);
       expect(_underStrip(tester), under);
       expect(find.text('1 of 2 here'), findsOneWidget);
+      if (!motion) {
+        await _capture(tester, 'clinvar-page-card');
+      }
       expect(
         find.descendant(
           of: _key('evidence-readout'),
@@ -317,6 +345,7 @@ void main() {
     // Nothing to zoom while folded; the page of its own is still a key away.
     expect(_key('evidence-zoom-in-dna'), findsNothing);
     expect(_key('evidence-expand-dna'), findsOneWidget);
+    await _capture(tester, 'clinvar-page-at-rest');
     expect(tester.getSize(_key('evidence-fold-dna')).height, 44);
     // Folded is not a filter.
     for (final String section in <String>[
@@ -332,6 +361,7 @@ void main() {
     expect(_key('evidence-count-dna'), findsNothing);
     expect(_key('evidence-zoom-in-dna'), findsOneWidget);
     expect(memory.dnaOpen, isTrue);
+    await _capture(tester, 'clinvar-page-dna-open');
 
     // Kept for the gene: the list opens again as it was left.
     await tester.tap(find.byType(CloseButton));

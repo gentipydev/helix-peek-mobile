@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:helixpeek/core/theme/app_theme.dart';
@@ -46,21 +50,24 @@ Future<void> _walk(
   await tester.binding.setSurfaceSize(const Size(390, 844));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.pumpWidget(
-    MaterialApp(
-      theme: AppTheme.dark,
-      debugShowCheckedModeBanner: false,
-      builder: (BuildContext context, Widget? child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(disableAnimations: !motion),
-        child: child!,
-      ),
-      home: Theme(
-        data: AppTheme.analysis,
-        child: AnatomyScreen(
-          record: insulin(),
-          target: TestCatalog.insulin,
-          constraint: insulinConstraint(),
-          impact: insulinImpact(),
-          clinvar: snapshot(),
+    RepaintBoundary(
+      key: const ValueKey<String>('capture'),
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        debugShowCheckedModeBanner: false,
+        builder: (BuildContext context, Widget? child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: !motion),
+          child: child!,
+        ),
+        home: Theme(
+          data: AppTheme.analysis,
+          child: AnatomyScreen(
+            record: insulin(),
+            target: TestCatalog.insulin,
+            constraint: insulinConstraint(),
+            impact: insulinImpact(),
+            clinvar: snapshot(),
+          ),
         ),
       ),
     ),
@@ -150,6 +157,27 @@ String? _returnLabel(WidgetTester tester) {
       .data;
 }
 
+
+/// Writes the screen to `$SHOT_DIR/<name>.png`, where SHOT_DIR is set.
+Future<void> _capture(WidgetTester tester, String name) async {
+  final String? folder = Platform.environment['SHOT_DIR'];
+  if (folder == null) {
+    return;
+  }
+  final RenderRepaintBoundary boundary = tester.renderObject(
+    find.byKey(const ValueKey<String>('capture')),
+  );
+  await tester.runAsync(() async {
+    final ui.Image shot = await boundary.toImage(pixelRatio: 2);
+    final ByteData bytes = (await shot.toByteData(
+      format: ui.ImageByteFormat.png,
+    ))!;
+    Directory(folder).createSync(recursive: true);
+    File('$folder/$name.png').writeAsBytesSync(bytes.buffer.asUint8List());
+    shot.dispose();
+  });
+}
+
 int _stage(WidgetTester tester) =>
     tester.widget<StageBar>(find.byType(StageBar)).index;
 
@@ -192,6 +220,9 @@ void main() {
         expect(_stage(tester), 2);
         expect(_returnLabel(tester), 'c.268');
         expect(_key('walk-return-clinvar'), findsNothing);
+        if (!motion && !header) {
+          await _capture(tester, 'sheet-landing-gly90');
+        }
 
         if (header) {
           await tester.tap(_key('walk-return-sheet'));
@@ -209,6 +240,9 @@ void main() {
         expect(_key('evidence-detail-$_g90c'), findsOneWidget);
         expect(_sheet(tester, 'impact-panel-scroll'), (scrolled, height));
         expect(_key('walk-return-sheet'), findsNothing);
+        if (!motion && header) {
+          await _capture(tester, 'sheet-landing-back-c268');
+        }
       }
 
       // The sheet keeps its own Back: the next one closes it, and the walk

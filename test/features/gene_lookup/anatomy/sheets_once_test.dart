@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:helixpeek/core/evidence/protein_constraint.dart';
@@ -43,7 +47,10 @@ Future<void> _walk(WidgetTester tester, {required int pages}) async {
       debugShowCheckedModeBanner: false,
       builder: (BuildContext context, Widget? child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(disableAnimations: true),
-        child: child!,
+        child: RepaintBoundary(
+          key: const ValueKey<String>('capture'),
+          child: child!,
+        ),
       ),
       home: Theme(
         data: AppTheme.analysis,
@@ -88,6 +95,27 @@ Future<void> _tapResidue(WidgetTester tester, int number) async {
   await tester.pumpAndSettle();
 }
 
+
+/// Writes the screen to `$SHOT_DIR/<name>.png`, where SHOT_DIR is set.
+Future<void> _capture(WidgetTester tester, String name) async {
+  final String? folder = Platform.environment['SHOT_DIR'];
+  if (folder == null) {
+    return;
+  }
+  final RenderRepaintBoundary boundary = tester.renderObject(
+    find.byKey(const ValueKey<String>('capture')),
+  );
+  await tester.runAsync(() async {
+    final ui.Image shot = await boundary.toImage(pixelRatio: 2);
+    final ByteData bytes = (await shot.toByteData(
+      format: ui.ImageByteFormat.png,
+    ))!;
+    Directory(folder).createSync(recursive: true);
+    File('$folder/$name.png').writeAsBytesSync(bytes.buffer.asUint8List());
+    shot.dispose();
+  });
+}
+
 /// The open sheet's content, scrolled.
 ScrollPosition _content(WidgetTester tester, String key) => tester
     .state<ScrollableState>(
@@ -122,6 +150,7 @@ void main() {
       findsOneWidget,
     );
     expect(tester.getSize(compare).height, greaterThanOrEqualTo(44));
+    await _capture(tester, 'base-sheet-c268');
     // Under Contributions, and in its style.
     expect(
       tester.getRect(compare).top,
@@ -184,6 +213,7 @@ void main() {
     expect(find.textContaining('The model'), findsNothing);
     expect(gln28.facts, isNull);
     expect(_key('constraint-facts'), findsNothing);
+    await _capture(tester, 'residue-sheet-gln28');
 
     // A cysteine's bridge, and a piece cut away, are facts the sheet keeps.
     for (final (int number, String facts) in <(int, String)>[
@@ -203,6 +233,7 @@ void main() {
     await tester.ensureVisible(facts);
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(facts).data, 'links the B chain to the A chain');
+    await _capture(tester, 'residue-sheet-cys31-facts');
     // Its partner is the identity's, once.
     expect(find.textContaining('S–S Cys96 (A7)'), findsOneWidget);
   });
@@ -225,6 +256,7 @@ void main() {
       findsNothing,
     );
     expect(find.text('Uncertain significance'), findsOneWidget);
+    await _capture(tester, 'record-class-once-m5i');
 
     // C96Y: a conflict, each part under its own heading still.
     await _walk(tester, pages: 2);
@@ -272,6 +304,7 @@ void main() {
     _content(tester, 'constraint-panel-scroll').jumpTo(40);
     await tester.pumpAndSettle();
     expect(_key('inspector-fade-top'), findsOneWidget);
+    await _capture(tester, 'residue-sheet-fades');
     _content(tester, 'constraint-panel-scroll').jumpTo(0);
     await tester.pumpAndSettle();
     expect(_key('inspector-fade-top'), findsNothing);
