@@ -111,16 +111,22 @@ class AnatomyScreen extends StatefulWidget {
   }) : landing = null,
        conservation = false,
        _model = null,
-       _reading = null;
+       _reading = null,
+       _origin = null,
+       _memory = null;
 
-  /// The walk a ClinVar record's link opens, above the list it came from.
+  /// The walk a ClinVar record's link opens, above the list it came from, or
+  /// above the walk whose sheet it was followed from.
   ///
   /// It is the same walk, opened on the page that holds [landing] with that
   /// residue or base already up, and it is a page of its own: Back, or its
-  /// header's "← ClinVar", takes it away and leaves the list exactly as it was
-  /// — and under the list, the walk the reader opened it from, untouched. The
-  /// jump used to drive that walk itself, so closing the list left the reader
-  /// wherever the record had sent them.
+  /// header's way back — "← ClinVar", or the sheet's own name, "← c.268" —
+  /// takes it away and leaves what was under it exactly as it was: the list,
+  /// and under the list the walk the reader opened it from, untouched; or that
+  /// walk's sheet, its record still open. The jump used to drive that walk
+  /// itself, so closing the list left the reader wherever the record had sent
+  /// them, and from a sheet there was nothing to go back to (the user's ask,
+  /// 2026-11-15).
   const AnatomyScreen._landing({
     required this.record,
     required this.target,
@@ -131,6 +137,8 @@ class AnatomyScreen extends StatefulWidget {
     this.conservation = false,
     this._model,
     this._reading,
+    this._origin,
+    this._memory,
   });
 
   final GeneRecord record;
@@ -161,6 +169,14 @@ class AnatomyScreen extends StatefulWidget {
   /// a landing neither derives the record nor reads thousands of records again.
   final AnatomyModel? _model;
   final _ClinVarReading? _reading;
+
+  /// The sheet a landing was opened from, or null for one the ClinVar list
+  /// opened, and for every walk the reader came to by choosing a protein.
+  final _Origin? _origin;
+
+  /// The walk's memory of its ClinVar list, so a list a landing opens of its
+  /// own opens as the walk's would.
+  final VariantsOverviewMemory? _memory;
 
   @override
   State<AnatomyScreen> createState() => _AnatomyScreenState();
@@ -414,7 +430,8 @@ class _AnatomyScreenState extends State<AnatomyScreen>
   bool _agreementOpen = false;
 
   /// Where the overview was left, for as long as this gene is shown.
-  VariantsOverviewMemory _overviewMemory = VariantsOverviewMemory();
+  late VariantsOverviewMemory _overviewMemory =
+      widget._memory ?? VariantsOverviewMemory();
 
   /// The gene's named pieces, for the overview's gene drawing.
   List<GeneRun>? _geneRunsMemo;
@@ -588,8 +605,18 @@ class _AnatomyScreenState extends State<AnatomyScreen>
                 focus: <String>[for (final VariantEvidence e in here) e.variant.id],
               ),
             ),
-      onResidue: residue == null ? _goToResidue : null,
-      onBase: residue == null ? null : _goToBase,
+      onResidue: residue == null
+          ? (int number) => _follow(
+              ResidueTarget(number),
+              from: (title: scope, at: BaseTarget(position!)),
+            )
+          : null,
+      onBase: residue == null
+          ? null
+          : (int at) => _follow(
+              BaseTarget(at),
+              from: (title: scope, at: ResidueTarget(residue)),
+            ),
       // A residue sheet's record opens its base's page of both models and
       // ClinVar; a base sheet's codon line already does.
       compareFor: residue == null
@@ -623,8 +650,10 @@ class _AnatomyScreenState extends State<AnatomyScreen>
   /// [AnatomyScreen._landing] — so when that page is gone the list, and this
   /// walk under it, are both exactly as the reader left them.
   ///
-  /// A landing already has a list, the one under it, so from there this goes
-  /// back to that list carrying [focus] rather than stacking a second one.
+  /// A landing the list opened already has a list, the one under it, so from
+  /// there this goes back to that list carrying [focus] rather than stacking
+  /// a second one. A landing a sheet opened has none under it, and opens the
+  /// list over itself, as the walk does.
   ///
   /// [over] is the sheet it was asked for from, which the list rises over and
   /// then takes away.
@@ -632,7 +661,7 @@ class _AnatomyScreenState extends State<AnatomyScreen>
     List<String> focus = const <String>[],
     Route<Object?>? over,
   }) async {
-    if (widget.landing != null) {
+    if (widget.landing != null && widget._origin == null) {
       // The list is already under the landing: the sheet goes down, and the
       // landing goes with it.
       if (over != null && over.isCurrent) {
@@ -776,8 +805,12 @@ class _AnatomyScreenState extends State<AnatomyScreen>
   );
 
   /// Opens [target] as a landing above the overview, and hands the overview
-  /// the records the reader asked for from there, if any.
-  Future<List<String>?> _openLanding(VariantTarget target) {
+  /// the records the reader asked for from there, if any; or, with [origin],
+  /// above this walk, from the sheet [origin] names.
+  Future<List<String>?> _openLanding(
+    VariantTarget target, {
+    _Origin? origin,
+  }) {
     final CapturedThemes themes = _routeThemes();
     // Taken now: the route's builder can run again long after this, and the
     // landing is of the walk as it was when the link was followed.
@@ -791,6 +824,8 @@ class _AnatomyScreenState extends State<AnatomyScreen>
       conservation: _conservation,
       model: _model,
       reading: _evidenceState,
+      origin: origin,
+      memory: _overviewMemory,
     );
     return Navigator.of(context).push<List<String>>(
       walkRoute<List<String>>(
@@ -800,8 +835,63 @@ class _AnatomyScreenState extends State<AnatomyScreen>
     );
   }
 
+  /// Whether a landing a sheet's link opened is up, or on its way: a second
+  /// tap on the link while it slides in would open a second one.
+  bool _sheetLandingOpen = false;
+
+  /// Follows a sheet's ClinVar link to [target]: a record's "Residue ›" on a
+  /// base sheet, or its "Base ›" on a residue sheet.
+  ///
+  /// In the reader's own walk it opens [target] as a landing, a page of its
+  /// own above the walk, which Back takes away and leaves the sheet [from]
+  /// names exactly as it was: its record still open, scrolled where it was.
+  /// It was a jump in this walk until 2026-11-15, which took that sheet away
+  /// and left nothing to go back to (the user's ask). In a landing it is the
+  /// jump still, as every link there is, but for a link to the very place a
+  /// sheet's landing was opened from, which goes back to that sheet rather
+  /// than drawing it a second time.
+  void _follow(VariantTarget target, {required _Origin from}) {
+    if (widget.landing == null) {
+      unawaited(_openSheetLanding(target, from));
+      return;
+    }
+    if (widget._origin case final _Origin origin
+        when _samePlace(origin.at, target)) {
+      _leave();
+      return;
+    }
+    switch (target) {
+      case ResidueTarget(:final int number):
+        _goToResidue(number);
+      case BaseTarget(:final int position):
+        _goToBase(position);
+    }
+  }
+
+  Future<void> _openSheetLanding(VariantTarget target, _Origin from) async {
+    if (_sheetLandingOpen) {
+      return;
+    }
+    _sheetLandingOpen = true;
+    try {
+      await _openLanding(target, origin: from);
+    } finally {
+      _sheetLandingOpen = false;
+    }
+  }
+
+  /// Whether [a] and [b] are the same residue, or the same base.
+  static bool _samePlace(VariantTarget a, VariantTarget b) => switch ((a, b)) {
+    (ResidueTarget(number: final int x), ResidueTarget(number: final int y)) =>
+      x == y,
+    (BaseTarget(position: final int x), BaseTarget(position: final int y)) =>
+      x == y,
+    _ => false,
+  };
+
   /// Leaves a landing for the list under it, with [focus] for the list to open
-  /// on, or null — from the header — for the list as it was.
+  /// on, or null — from the header — for the list as it was; or, for a landing
+  /// a sheet opened, for that sheet as it was.
   ///
   /// Straight there, whatever the reader has opened since arriving: a plain
   /// pop would only close the newest of those.
@@ -2270,11 +2360,13 @@ class _AnatomyScreenState extends State<AnatomyScreen>
             onWholeGene: _selectionActive
                 ? () => unawaited(_returnToGene())
                 : null,
-            // Only while Back goes to the list: a region the reader opened in
-            // a landing is closed first, and says so.
+            // Only while Back goes to the list, or to the sheet the landing
+            // was opened from: a region the reader opened in a landing is
+            // closed first, and says so.
             onReturn: widget.landing == null || _selectionHistory != null
                 ? null
                 : _leave,
+            returnTo: widget._origin?.title,
             liftedBase: _liftedStatus != null,
           ),
           body: SafeArea(
@@ -2622,6 +2714,11 @@ typedef _BaseFacts = ({
   Color tint,
 });
 
+/// The sheet a landing was opened from: its title, which the landing's
+/// header names its way back by, and the residue or base it is about, which
+/// a link in the landing goes back to rather than opening it again.
+typedef _Origin = ({String title, VariantTarget at});
+
 final class _ClinVarReading {
   _ClinVarReading(
     this.snapshot,
@@ -2752,6 +2849,7 @@ class _Header extends StatelessWidget implements PreferredSizeWidget {
     this.onZoom,
     this.onWholeGene,
     this.onReturn,
+    this.returnTo,
     this.liftedBase = false,
     this.textScale = 1,
   });
@@ -2771,10 +2869,14 @@ class _Header extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onZoom;
   final VoidCallback? onWholeGene;
 
-  /// Back to the ClinVar overview under a landing. It stands where "Whole gene"
-  /// would, ahead of it, whenever Back goes to the list: the header names
-  /// where Back goes.
+  /// Back to what is under a landing: the ClinVar overview, or the sheet
+  /// [returnTo] names. It stands where "Whole gene" would, ahead of it,
+  /// whenever Back goes there: the header names where Back goes.
   final VoidCallback? onReturn;
+
+  /// The title of the sheet a landing was opened from — `c.268`, `Gly90` —
+  /// which its way back reads, or null for a landing the list opened.
+  final String? returnTo;
 
   /// Whether the status is a base lifted out of an open region.
   final bool liftedBase;
@@ -2840,10 +2942,14 @@ class _Header extends StatelessWidget implements PreferredSizeWidget {
         title: onReturn != null
             ? _back(
                 theme,
-                'ClinVar',
+                returnTo ?? 'ClinVar',
                 onReturn!,
-                key: const ValueKey<String>('walk-return-clinvar'),
-                spoken: 'Back to ClinVar records',
+                key: ValueKey<String>(
+                  returnTo == null ? 'walk-return-clinvar' : 'walk-return-sheet',
+                ),
+                spoken: returnTo == null
+                    ? 'Back to ClinVar records'
+                    : 'Back to $returnTo',
               )
             : onWholeGene != null
             ? _back(theme, 'Whole gene', onWholeGene!)

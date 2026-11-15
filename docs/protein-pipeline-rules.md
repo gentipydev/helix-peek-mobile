@@ -682,7 +682,16 @@ each closable to its heading and count from that heading, and builds its rows as
 they come on screen, since dystrophin has thousands. A record's link opens its
 residue or base above the list, as a walk of its own; Back, or that walk's
 "← ClinVar", returns to the list exactly as it was left, and closing the list
-returns to the walk exactly as it was before the list was opened. A record's
+returns to the walk exactly as it was before the list was opened. On a sheet,
+a record's "Residue ›" or "Base ›" opens the same kind of walk above the
+reader's own, its header naming the sheet it came from ("← c.268",
+"← Gly90"); Back, or that header, returns to the sheet exactly as it was, its
+record open and its scroll kept (the user's ask, 2026-11-15: it had been a
+jump in the walk, with no way back). Inside such a walk the links are jumps
+within it, as inside the list's, but a link to the very place it came from
+goes back there; and only a walk the list opened hands "All ›" and the ESM-2
+bar's ClinVar key back to its list, where one a sheet opened opens the list
+over itself, as the reader's own walk does. A record's
 accession opens the record on ClinVar. A record's detail carries ClinVar's own
 words and its links; where only AVI applies to its change (off the protein,
 silent, a stop, the start codon) one line says so, in molecular words. Where
