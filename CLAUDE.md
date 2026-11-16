@@ -238,9 +238,9 @@ the page says so, the user's picks after they learned a tap did more than
 highlight: Tokenise and Shift name the followed peptide in the accent, on a
 card a little towards it (`LmInks.followed`; in Shift its ids are the only
 ones in the accent, `ShiftScene.calm`, and the peptides keep
-`ShiftLayout.airGap` between them), with a small `followed` plate
-and "tap another to follow it" beside it (`drawFollowed`, shorter where
-narrow), the mark leaving with the other peptides in Embedding's opening;
+`ShiftLayout.airGap` between them); the small `followed` plate and
+"tap another to follow it" that sat after the name were removed on
+2026-11-15 at the user's word, the highlight being enough;
 Scores names the followed place under the table, from its outline to the
 sum, `C11 followed` and under it "tap a row to follow another place", all
 left of the chart (`ScoresScene.followedMark`). Loss's line in focus wears

@@ -914,34 +914,12 @@ void main() {
     }
   });
 
-  testWidgets('the followed peptide and place are marked where they are named, clear of all else', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('the followed place is marked where it is named, clear of all else', (WidgetTester tester) async {
     final (LmInks inks, LmKit kit) = await _drawing(tester);
     addTearDown(kit.dispose);
-    bool inside(Rect inner, Rect outer) =>
-        inner.left >= outer.left && inner.top >= outer.top && inner.right <= outer.right && inner.bottom <= outer.bottom;
-    for (final Size size in const <Size>[Size(440, 697), Size(375, 491), Size(320, 300)]) {
-      for (final String stage in <String>['Tokenise', 'Shift']) {
-        final (Rect, Rect, Rect) Function(Size, LmView) mark =
-            stage == 'Tokenise' ? TokeniseScene.followedMark : ShiftScene.followedMark;
-        final Set<double> rows = <double>{};
-        for (int p = 0; p < trace.peptides.length; p++) {
-          final (Rect plate, Rect card, Rect tile) = mark(size, view(inks, kit, peptide: p));
-          final String why = '$stage, peptide $p, $size';
-          // On the followed peptide's card, on its name's line, over its
-          // tiles, and on the canvas.
-          expect(inside(plate, card), isTrue, reason: why);
-          expect(plate.bottom, lessThanOrEqualTo(tile.top), reason: why);
-          expect(plate.right, lessThanOrEqualTo(size.width), reason: why);
-          rows.add(plate.top);
-        }
-        // A tap on another peptide takes the mark with it.
-        expect(rows, hasLength(trace.peptides.length), reason: '$stage, $size');
-      }
-    }
     // Scores names the followed place under the table, all of it left of
-    // the chart and on the canvas.
+    // the chart and on the canvas. Tokenise and Shift mark the followed
+    // peptide by its card and its name in the accent alone.
     for (final Size size in const <Size>[Size(440, 697), Size(375, 476), Size(393, 540)]) {
       for (int p = 0; p < trace.peptides.length; p++) {
         final LmView scene = view(inks, kit, peptide: p, position: trace.peptides[p].inputs ~/ 2);

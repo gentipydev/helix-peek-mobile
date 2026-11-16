@@ -103,15 +103,12 @@ final class ShiftScene extends LmScene {
       }
       final double label = named * (focus ? fade.chrome * fade.focusLabel : shown);
       if (label > 0) {
-        final Size name = view.kit.draw(
+        view.kit.draw(
           canvas,
           '${peptide.source.label} · $residues aa',
           inked(view.kit.sans, 10, focus ? view.inks.signal : view.inks.quiet, alpha: label),
           Offset(layout.left, layout.rowTop(p)),
         );
-        if (focus) {
-          drawFollowedAfter(canvas, view, layout, name, Offset(layout.left, layout.rowTop(p)), label);
-        }
       }
       if (!focus || fade.focusX) {
         // Tokenise's ids, all in the accent, keep it only where followed.
@@ -381,36 +378,6 @@ final class ShiftScene extends LmScene {
     final TracePeptide focus = view.focus;
     return 'Shift. ${caption(view, frame)}. Followed: ${focus.source.label}, '
         '${focus.sequence.length} residues; tap another peptide to follow it.';
-  }
-
-  /// The followed mark after the followed peptide's [name], drawn at
-  /// [at], as Tokenise marks it: Embedding, which brings the name down,
-  /// draws it with the name.
-  static Rect drawFollowedAfter(Canvas canvas, LmView view, ShiftLayout layout, Size name, Offset at, double alpha) =>
-      drawFollowed(
-        canvas,
-        view,
-        Offset(at.dx + name.width + followedAfter, at.dy + name.height / 2),
-        layout.right,
-        TokeniseScene.followHints,
-        alpha,
-      );
-
-  /// The followed peptide's mark in x, its card, and its first tile, once
-  /// the peptides have opened out on [size].
-  static (Rect, Rect, Rect) followedMark(Size size, LmView view) {
-    final ShiftLayout layout = ShiftLayout(size, view);
-    final TracePeptide peptide = view.focus;
-    final TextPainter name = view.kit.layout(
-      '${peptide.source.label} · ${peptide.sequence.length} aa',
-      inked(view.kit.sans, 10, view.inks.signal),
-    );
-    final Offset at = Offset(layout.left, layout.rowTop(view.peptide));
-    return (
-      followedPlate(view, Offset(at.dx + name.width + followedAfter, at.dy + name.height / 2)),
-      layout.card(view.peptide),
-      layout.x(view.peptide, 0),
-    );
   }
 
   /// Shift's own page: what it takes and gives, then what x and y each are

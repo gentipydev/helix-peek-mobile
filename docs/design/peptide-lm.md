@@ -1148,17 +1148,15 @@ through; a tap on a row from Scores on picks the place the stage works out.
 Nothing said so: the followed peptide's card was one shade off the ground,
 and the user, asking for the taps to go, learned they did more than
 highlight. Their picks of 2026-11-12, asked with previews:
-- **Tag and hint**: Tokenise and Shift write the followed peptide's name in
+- **Tag and hint** (the tag and hint since removed): Tokenise and Shift write the followed peptide's name in
   the accent, on a card a little towards it (`LmInks.followed`, the card
   lerped 0.06 to the accent, 0.12 until the Shift calm-down below), and in
-  Shift its ids are the only ones left in the accent; after the name a small
-  plate in the
-  accent, `followed`, then in the quiet ink "tap another to follow it", or
-  "tap to change" where that does not fit (`drawFollowed`, `followedPlate`,
-  `drawFollowHint` in `lm_drawing.dart`). The mark is a line's height, so it
-  sits on the name's line, over the tiles. In Tokenise it goes with the
-  names as the table closes; the matrix keeps the card. Embedding draws it
-  with the name it brings down, and it goes with the other peptides.
+  Shift its ids are the only ones left in the accent. After the name there
+  was a small plate in the accent, `followed`, then in the quiet ink "tap
+  another to follow it"; on 2026-11-15 the user had both removed from
+  Tokenise and Shift (and so from Embedding's opening, which carried
+  Shift's), the highlight being enough. The card and the accent name remain;
+  the matrix keeps the card.
 - **The place once, in Scores**: from the outline (0.6) to the sum (3.9),
   under the table, the place's name in the accent, `followed`, and under
   them "tap a row to follow another place" ("tap a row to change" where

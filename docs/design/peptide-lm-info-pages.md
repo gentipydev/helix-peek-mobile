@@ -78,7 +78,7 @@ Every page was rewritten on 2026-11-12 (section 1).
 
 | Stage | Beats | Own page | Sections | Notes on its canvas |
 | --- | --- | --- | --- | --- |
-| Tokenise | 11 | 2026-11-06 | four | none (captions, and the followed mark) |
+| Tokenise | 11 | 2026-11-06 | four | none (captions) |
 | Shift | 5 | 2026-11-07 | two | none (captions and two glossed tags) |
 | Embedding | 15 | 2026-11-07 | three | yes, five |
 | Scores | 20 | 2026-11-07 | four | yes, six |

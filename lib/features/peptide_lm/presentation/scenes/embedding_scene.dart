@@ -743,14 +743,12 @@ final class EmbeddingScene extends LmScene {
         Offset(layout.foot(0).left, layout.footTop - ShiftLayout.label),
         descend,
       )!;
-      final Size name = view.kit.draw(
+      view.kit.draw(
         canvas,
         '${view.focus.source.label} · $residues aa',
         inked(view.kit.sans, 10, view.inks.signal, alpha: named),
         at,
       );
-      // Shift's followed mark goes with the other peptides.
-      ShiftScene.drawFollowedAfter(canvas, view, layout.shift, name, at, named * (1 - _span(beat, _away)) * fade.chrome);
     }
     for (int k = 0; k < ids.length - 1; k++) {
       final Rect from = layout.shift.x(p, k);
