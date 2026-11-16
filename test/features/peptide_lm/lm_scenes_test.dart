@@ -139,21 +139,35 @@ void main() {
     expect(caption(LmStage.tokenise, 0.2), 'Two peptides, 23 residues, become ids in a 23-token vocabulary');
     expect(caption(LmStage.tokenise, 0.6), 'One batch: both peptides in one matrix, read by Forward in one pass');
     expect(caption(LmStage.tokenise, 0.99), startsWith('The vocabulary, counted: '));
-    // Shift, beat by beat: x, its copy, the copy one place left, and what
-    // that makes.
+    // Shift, beat by beat: x, the peptide followed alone, its copy, the copy
+    // one place left, one pair of it, and what that makes.
     double shift(double beat) => beat / LmStage.shift.beats;
     expect(
       caption(LmStage.shift, shift(0.5)),
       'Input x: each frame less its last place, ${trace.peptides.length} × ${trace.width} tokens',
     );
-    expect(caption(LmStage.shift, shift(2)), 'Target y starts as a copy of the same peptides');
     expect(
-      caption(LmStage.shift, shift(3)),
+      caption(LmStage.shift, shift(2)),
+      'The peptide followed, alone: ${last.focus.source.label}, '
+      '${math.min(last.focus.sequence.length + 2, trace.width)} places of x',
+    );
+    expect(caption(LmStage.shift, shift(4.5)), 'Target y starts as a copy of the same peptide');
+    expect(
+      caption(LmStage.shift, shift(6)),
       "One place to the left: each place's answer is the token after it",
+    );
+    // The pair: the place followed in x, and the token after it in y.
+    final int at = last.position;
+    final List<int> frame0 = TokeniseScene.frameOf(trace, last.peptide);
+    expect(
+      caption(LmStage.shift, shift(8)),
+      'Place $at: x reads ${trace.token(frame0[at])} (${frame0[at]}), '
+      'y holds ${trace.token(frame0[at + 1])} (${frame0[at + 1]}), the token at place ${at + 1}',
     );
     expect(
       caption(LmStage.shift, 0.99),
-      'Only x goes in; Loss grades each guess against y: ${trace.targetCount} targets',
+      'Only x goes in; Loss grades each guess against y: '
+      '${last.focus.inputs} targets here, ${trace.targetCount} in the batch',
     );
     // Embedding, beat by beat: the table, what its numbers are, the lookup,
     // the gather, the position embedding and x0.
@@ -677,17 +691,44 @@ void main() {
     expect((pick! as PickCheckpoint).index, trace.checkpoints.length - 1);
 
     // Shift: a row of the matrix it opens on puts its peptide in focus, and
-    // a peptide's card once the matrix has opened out.
-    for (final double local in <double>[0, 1]) {
+    // a peptide's card once the matrix has opened out; once the peptide
+    // followed stands alone, a place of it in x or in y, every place
+    // graded, and while it moves forward, nothing.
+    for (final double beat in <double>[0, 2]) {
       final Set<int> found = <int>{};
       for (double y = 0; y < size.height; y += 1) {
         final LmHit? hit = sceneOf(LmStage.shift)
-            .hitAt(size, scene, Offset(200, y), timeline.frameIn(LmStage.shift, local));
+            .hitAt(size, scene, Offset(200, y), timeline.frameIn(LmStage.shift, beat / LmStage.shift.beats));
         if (hit is FocusPeptide) {
           found.add(hit.peptide);
         }
       }
-      expect(found, <int>{for (int p = 0; p < trace.peptides.length; p++) p});
+      expect(found, <int>{for (int p = 0; p < trace.peptides.length; p++) p}, reason: 'beat $beat');
+    }
+    for (int p = 0; p < trace.peptides.length; p++) {
+      final LmView followed = view(inks, kit, peptide: p);
+      final SoloLayout solo = SoloLayout(size, followed);
+      final Set<int> places = <int>{};
+      for (double y = 0; y < size.height; y += 2) {
+        for (double x = 0; x < size.width; x += 2) {
+          final LmHit? hit = sceneOf(LmStage.shift)
+              .hitAt(size, followed, Offset(x, y), timeline.frameIn(LmStage.shift, 1));
+          if (hit is FocusPosition) {
+            places.add(hit.position);
+          }
+          expect(hit, isNot(isA<FocusPeptide>()));
+        }
+      }
+      expect(places, <int>{for (int k = 0; k < followed.focus.inputs; k++) k}, reason: 'peptide $p');
+      // Under y as well as x.
+      final LmHit? under = sceneOf(LmStage.shift)
+          .hitAt(size, followed, solo.y(1).center, timeline.frameIn(LmStage.shift, 1));
+      expect((under! as FocusPosition).position, 1);
+      expect(
+        sceneOf(LmStage.shift)
+            .hitAt(size, followed, solo.x(1).center, timeline.frameIn(LmStage.shift, 3.2 / LmStage.shift.beats)),
+        isNull,
+      );
     }
 
     // Scores, Attention, Feed-forward and Forward: a row, or its row of a
@@ -938,13 +979,13 @@ void main() {
     }
   });
 
-  testWidgets("Shift's peptides have room between them, only the followed one's ids keep the accent, padding faint", (
+  testWidgets("Shift's batch has room, then the peptide followed stands alone, large, its padding faint", (
     WidgetTester tester,
   ) async {
     final (LmInks inks, LmKit kit) = await _drawing(tester);
     addTearDown(kit.dispose);
-    // Room first: the tiles grow only once the peptides are set apart, and
-    // give the room back only past the snug size.
+    // The batch first: the tiles grow only once the peptides are set apart,
+    // and give the room back only past the snug size.
     for (final Size size in const <Size>[Size(440, 689), Size(402, 607), Size(375, 476), Size(393, 300)]) {
       final ShiftLayout layout = ShiftLayout(size, view(inks, kit));
       final double gap = layout.rowPitch - layout.block;
@@ -953,9 +994,32 @@ void main() {
         isTrue,
         reason: '$size: gap $gap, tile ${layout.tileHeight}',
       );
+      // Then the peptide followed, alone: every place on the canvas and in
+      // its card, each line of y right under its line of x and clear of the
+      // next line of x, and every tile larger than the batch's.
+      for (int p = 0; p < trace.peptides.length; p++) {
+        final SoloLayout solo = SoloLayout(size, view(inks, kit, peptide: p));
+        final String why = '$size, peptide $p';
+        expect(solo.side, greaterThan(layout.tileHeight), reason: why);
+        for (int k = 0; k < solo.places; k++) {
+          for (final Rect tile in <Rect>[solo.x(k), solo.y(k)]) {
+            expect((Offset.zero & size).inflate(1e-9).contains(tile.topLeft), isTrue, reason: '$why, $k');
+            expect(tile.right, lessThanOrEqualTo(size.width + 1e-9), reason: '$why, $k');
+            expect(tile.bottom, lessThanOrEqualTo(solo.card.bottom + 1e-9), reason: '$why, $k');
+            expect(tile.left, greaterThanOrEqualTo(solo.card.left - 1e-9), reason: '$why, $k');
+          }
+          expect(solo.y(k).top, greaterThan(solo.x(k).bottom), reason: '$why, $k');
+          expect(solo.y(k).left, solo.x(k).left, reason: '$why, $k');
+        }
+        for (int line = 0; line + 1 < solo.lines; line++) {
+          expect(solo.yLine(line).bottom, lessThan(solo.xLine(line + 1).top), reason: '$why, line $line');
+        }
+        expect(solo.card.top, greaterThan(solo.yTag.dy + solo.tag), reason: why);
+      }
     }
-    // The accent: on the followed peptide's ids, in x and in y, and on no
-    // other peptide's.
+    // The accent: on the followed peptide's ids, and on no other peptide's,
+    // while the batch shows; at the end, nothing drawn but the peptide
+    // followed under its tags.
     const Size size = Size(393, 540);
     const double dpr = 3;
     final Color accent = inks.signal;
@@ -994,12 +1058,15 @@ void main() {
     int pads = 0;
     for (int p = 0; p < trace.peptides.length; p++) {
       final LmView scene = view(inks, kit, peptide: p);
-      final ByteData data = await render(
-        (Canvas canvas) =>
-            LmScenePainter(view: scene, frame: () => timeline.frameIn(LmStage.shift, 1)).paint(canvas, size),
+      Future<ByteData> at(double beat) => render(
+        (Canvas canvas) => LmScenePainter(
+          view: scene,
+          frame: () => timeline.frameIn(LmStage.shift, beat / LmStage.shift.beats),
+        ).paint(canvas, size),
       );
+      final ByteData batch = await at(1.5);
       // Pixels of the accent's own colour, all but antialiasing.
-      int accented(Rect rect) {
+      int accented(ByteData data, Rect rect) {
         int n = 0;
         for (int y = (rect.top * dpr).floor(); y < (rect.bottom * dpr).ceil(); y++) {
           for (int x = (rect.left * dpr).floor(); x < (rect.right * dpr).ceil(); x++) {
@@ -1017,28 +1084,44 @@ void main() {
       final ShiftLayout layout = ShiftLayout(size, scene);
       for (int q = 0; q < trace.peptides.length; q++) {
         // Under the name's line, where the ids are.
-        for (final Rect block in <Rect>[layout.card(q), layout.yCard(q)]) {
-          final Rect ids = Rect.fromLTRB(block.left, block.top + 3 + ShiftLayout.label, block.right, block.bottom);
-          final int n = accented(ids);
-          expect(q == p ? n > 0 : n == 0, isTrue, reason: 'peptide $q, $p followed: $n accent pixels');
-        }
-        // Padding in y, an outline fainter than Tokenise's own, dimmed as
-        // much, and no dot, yet still there: the batch keeps its shape.
-        final List<int> frame = TokeniseScene.frameOf(trace, q);
-        for (int i = trace.peptides[q].inputs; i < frame.length - 1 && q != p; i++) {
-          if (trace.token(frame[i + 1]) != '<pad>') {
-            continue;
-          }
-          final Rect place = layout.y(q, i);
-          final ByteData was = await render(
-            (Canvas canvas) => drawToken(canvas, scene, place, frame[i + 1], alpha: 1 - ShiftScene.dimmed, mark: 0),
-          );
-          final int now = strongest(data, place);
-          expect(now, greaterThan(0), reason: 'peptide $q, place $i');
-          expect(now, lessThan(strongest(was, place)), reason: 'peptide $q, place $i');
-          pads++;
-          break;
-        }
+        final Rect block = layout.card(q);
+        final Rect ids = Rect.fromLTRB(block.left, block.top + 3 + ShiftLayout.label, block.right, block.bottom);
+        final int n = accented(batch, ids);
+        expect(q == p ? n > 0 : n == 0, isTrue, reason: 'peptide $q, $p followed: $n accent pixels');
+      }
+      final ByteData last = await at(LmStage.shift.beats.toDouble());
+      final SoloLayout solo = SoloLayout(size, scene);
+      expect(accented(last, solo.x(1)), greaterThan(0), reason: 'peptide $p');
+      expect(accented(last, solo.y(0)), greaterThan(0), reason: 'peptide $p');
+      // Under the card, the other peptides gone.
+      expect(
+        strongest(last, Rect.fromLTRB(0, solo.card.bottom + 1, size.width, size.height)),
+        0,
+        reason: 'peptide $p',
+      );
+      // The place under x's <eos>, whose answer is padding: an outline
+      // fainter than Tokenise's own, dimmed as much, and no dot, yet still
+      // there.
+      if (solo.xCount > scene.focus.inputs) {
+        final List<int> frame = TokeniseScene.frameOf(trace, p);
+        final int i = scene.focus.inputs;
+        expect(trace.token(frame[i + 1]), '<pad>');
+        final Rect place = solo.y(i);
+        // On the card, as the slot lies.
+        void card(Canvas canvas) => canvas.drawRRect(
+          RRect.fromRectAndRadius(solo.card, const Radius.circular(6)),
+          Paint()..color = inks.followed,
+        );
+        final ByteData bare = await render(card);
+        final ByteData was = await render((Canvas canvas) {
+          card(canvas);
+          drawToken(canvas, scene, place, frame[i + 1], alpha: 1 - ShiftScene.dimmed, mark: 0);
+        });
+        expect(strongest(last, place.deflate(0.5)), greaterThan(strongest(bare, place.deflate(0.5))), reason: 'peptide $p');
+        final int now = strongest(last, place.deflate(0.5));
+        expect(now, greaterThan(0), reason: 'peptide $p');
+        expect(now, lessThan(strongest(was, place.deflate(0.5))), reason: 'peptide $p');
+        pads++;
       }
     }
     expect(pads, greaterThan(0));
@@ -2562,7 +2645,7 @@ void main() {
     final int padded = trace.targets.fold<int>(0, (int n, List<int> row) => n + row.where((int id) => id == pad).length);
     expect(ShiftScene.unasked(trace), padded);
     expect(padded, 1);
-    expect(page, endsWith('; the one place whose answer would be padding is dimmed, with nothing to score.'));
+    expect(page, endsWith('; the one place of x whose answer would be padding is never scored.'));
   });
 
   testWidgets("Embedding's info page says what its two tables are and what their sum carries", (

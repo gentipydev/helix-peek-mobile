@@ -8,18 +8,23 @@ import '../../domain/training_trace.dart';
 import '../lm_info_sheet.dart';
 import 'lm_drawing.dart';
 import 'lm_scene.dart';
+import 'predict_scene.dart';
 import 'tokenise_scene.dart';
 
 /// Shift: input x and next token y, one place apart, as `sequences.batches`
 /// cuts the batch (`frame[:, :-1]` and `frame[:, 1:]`). It opens on
 /// Tokenise's last frame: the vocabulary goes, and the matrix opens out into
-/// its peptides again, input x, what the model reads. Then two moves: a copy
-/// of x lifts off it as a shadow and falls, whole, to its place under x,
-/// target y, the same peptides and tokens; and every line of the copy
-/// moves one place to the left, so that each place of y holds the token after
-/// the same place of x. `<bos>` leaves at the left, never a target, and the
-/// token that leaves a second line's start comes in at the first line's end,
-/// as text reflows. Then the pairs whose target is padding dim.
+/// its peptides again, input x, what the model reads. Then the other
+/// peptides go, slowly, and the one followed comes forward, its tiles grown
+/// large, each with its residue's letter, folded onto lines that leave room
+/// under each for y (the user's pick of 2026-11-16: the shift read as one
+/// place between rows 500 points apart). A copy of x falls into that room,
+/// target y, the same tokens; and every line of the copy moves one place to
+/// the left, so that each place of y holds the token after the same place
+/// of x. `<bos>` leaves at the left, never a target, and the token that
+/// leaves a line's start comes in at the end of the line above, as text
+/// reflows. Then the place of x whose answer is padding dims, and one pair
+/// is worked: the place followed, and under it the token after it.
 final class ShiftScene extends LmScene {
   const ShiftScene();
 
@@ -36,125 +41,157 @@ final class ShiftScene extends LmScene {
   static const (double, double) _xNamed = (1.0, 1.4);
   static const (double, double) _lastOut = (0.9, 1.4);
 
-  // The copy of the peptides lifts off x as its shadow, falls to its place
-  // under x, solid as it settles, and y is named as it lands; then it moves
-  // one place left; then the padding dims.
-  static const (double, double) _lift = (1.5, 1.85);
-  static const (double, double) _fall = (1.85, 2.75);
-  static const (double, double) _land = (2.4, 2.75);
-  static const (double, double) _yNamed = (2.45, 2.85);
-  static const (double, double) _slide = (2.9, 3.9);
-  static const (double, double) _dim = (4.1, 4.7);
+  // The other peptides and the padding go, slowly; the one followed comes
+  // forward and grows, its letters coming in as its tiles grow.
+  static const (double, double) _others = (1.6, 3.0);
+  static const (double, double) _move = (2.6, 3.8);
 
-  /// Where the caption turns: to the copy, the move, and what it makes.
-  static const double _copyCaption = 1.5;
-  static const double _slideCaption = 2.9;
-  static const double _madeCaption = 4.0;
+  /// x's line heads, once its lines have come to them.
+  static const (double, double) _xHeads = (3.5, 3.9);
 
-  /// How far a pair whose target is padding dims: none of the loss is
+  // The copy lifts off x as its shadow, falls into the room under each of
+  // its lines, solid as it settles, and y is named as it lands; then it
+  // moves one place left; then the place whose answer is padding dims, and
+  // one pair is lit.
+  static const (double, double) _lift = (4.0, 4.3);
+  static const (double, double) _fall = (4.3, 5.0);
+  static const (double, double) _land = (4.7, 5.0);
+  static const (double, double) _yNamed = (4.4, 4.9);
+  static const (double, double) _slide = (5.4, 6.8);
+  static const (double, double) _dim = (7.0, 7.5);
+  static const (double, double) _pair = (7.6, 8.1);
+
+  /// Where the caption turns: to the peptide followed, the copy, the move,
+  /// the pair worked, and what it makes.
+  static const double _focusCaption = 1.6;
+  static const double _copyCaption = 4.0;
+  static const double _slideCaption = 5.4;
+  static const double _pairCaption = 7.6;
+  static const double _madeCaption = 9.0;
+
+  /// How far a place whose target is padding dims: none of the loss is
   /// counted there.
   static const double dimmed = 0.65;
 
   /// How far under x the shadow lifts, how strong it is over x, and how
   /// strong once it has come out under x, until it lands.
-  static const double _shadowDrop = 5;
-  static const double _shadow = 0.2;
+  static const double _shadowDrop = 3;
   static const double _ghost = 0.6;
 
   /// How large an id is drawn in its tile, of the tile's height: larger
   /// than Tokenise draws it, the room the stage has being its tiles'.
   static const double numberScale = 0.62;
 
+  /// A large tile's id, with its letter over it: its share of the tile's
+  /// height, the largest it is written, and how far under the tile's middle.
+  static const double _letteredScale = 0.42;
+  static const double _letteredLargest = 20;
+  static const double _letteredDrop = 0.15;
+
+  /// A large tile's letter: its share of the tile's height, at most, and the
+  /// least it is written.
+  static const double _letterShare = 0.24;
+  static const double _letterLargest = 11;
+  static const double _letterLeast = 6;
+
+  /// How strong the place after the pair's x is lit, of the pair's light.
+  static const double _nextLight = 0.5;
+
   static double _span(double at, (double, double) span) => through(at, span.$1, span.$2);
+
+  static double _lerp(double a, double b, double t) => a + (b - a) * t;
 
   @override
   void paint(Canvas canvas, Size size, LmView view, TrainingFrame frame) =>
       _paint(canvas, size, view, frame.local * LmStage.shift.beats, const ShiftFade());
 
   /// The stage's last frame, with [fade] leaving out or fading what the
-  /// stage after it draws itself or retires: Forward opens on it.
+  /// stage after it draws itself or retires: Embedding opens on it.
   void paintEnd(Canvas canvas, Size size, LmView view, ShiftFade fade) =>
       _paint(canvas, size, view, LmStage.shift.beats.toDouble(), fade);
 
   void _paint(Canvas canvas, Size size, LmView view, double beat, ShiftFade fade) {
     final TrainingTrace trace = view.trace;
     final ShiftLayout layout = ShiftLayout(size, view);
+    final SoloLayout solo = SoloLayout(size, view);
     final TokeniseEnd end = TokeniseEnd(size, view);
     final double unfold = _span(beat, _unfold);
-    final double dim = _span(beat, _dim);
     final double named = _span(beat, _labels);
+    final double others = fade.others * (1 - _span(beat, _others));
+    final double move = _span(beat, _move);
+    final double dim = _span(beat, _dim);
     Rect xAt(int p, int k) => unfold >= 1 ? layout.x(p, k) : Rect.lerp(end.place(p, k), layout.x(p, k), unfold)!;
 
-    for (int p = 0; p < trace.peptides.length; p++) {
-      final bool focus = p == view.peptide;
-      final double shown = focus ? 1 : fade.others;
-      if (shown <= 0) {
+    // The other peptides, going.
+    for (int p = 0; p < trace.peptides.length && others > 0; p++) {
+      if (p == view.peptide) {
         continue;
       }
       final TracePeptide peptide = trace.peptides[p];
       final List<int> ids = TokeniseScene.frameOf(trace, p);
       final int residues = peptide.sequence.length;
-      if (focus && fade.card > 0) {
-        final Rect card = unfold >= 1 ? layout.card(p) : Rect.lerp(end.card(p), layout.card(p), unfold)!;
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(card, const Radius.circular(6)),
-          Paint()..color = _ink(view.inks.followed, fade.card),
-        );
-      }
-      final double label = named * (focus ? fade.chrome * fade.focusLabel : shown);
+      final double label = named * others;
       if (label > 0) {
         view.kit.draw(
           canvas,
           '${peptide.source.label} · $residues aa',
-          inked(view.kit.sans, 10, focus ? view.inks.signal : view.inks.quiet, alpha: label),
+          inked(view.kit.sans, 10, view.inks.quiet, alpha: label),
           Offset(layout.left, layout.rowTop(p)),
         );
       }
-      if (!focus || fade.focusX) {
-        // Tokenise's ids, all in the accent, keep it only where followed.
-        final Color number = focus ? view.inks.signal : Color.lerp(view.inks.signal, calm(view), unfold)!;
-        for (int k = 0; k < ids.length; k++) {
-          double alpha = shown;
-          if (k == ids.length - 1) {
-            alpha *= 1 - _span(beat, _lastOut);
-          } else if (k >= peptide.inputs) {
-            alpha *= 1 - dimmed * dim;
-          }
-          drawPlace(canvas, view, xAt(p, k), ids, k, residues, alpha, number: number, settled: unfold);
-        }
+      // Tokenise's ids, all in the accent, keep it only where followed.
+      final Color number = Color.lerp(view.inks.signal, calm(view), unfold)!;
+      for (int k = 0; k < ids.length; k++) {
+        final double alpha = k == ids.length - 1 ? others * (1 - _span(beat, _lastOut)) : others;
+        drawPlace(canvas, view, xAt(p, k), ids, k, residues, alpha, number: number, settled: unfold);
       }
     }
-    // The copy, over every line of x as it falls past them, faded as one
-    // picture until it lands: a faint shadow over x, stronger once it has
-    // come out under x's last line.
-    final double lift = _span(beat, _lift);
-    if (lift > 0) {
-      void copies() {
-        for (int p = 0; p < trace.peptides.length; p++) {
-          final double shown = p == view.peptide ? 1 : fade.others;
-          if (shown > 0) {
-            _y(canvas, view, layout, p, beat, lift, shown * fade.y, Offset(fade.ySlide, 0), dim, fade);
-          }
-        }
-      }
 
-      final double out = lift * (_ghost + (1 - _ghost) * _span(beat, _land));
-      if (_span(beat, _fall) >= 1) {
-        _faded(canvas, size, view, out, copies);
-      } else {
-        final double under = layout.card(trace.peptides.length - 1).bottom;
-        for (final (Rect part, double alpha) in <(Rect, double)>[
-          (Rect.fromLTRB(0, 0, size.width, under), lift * _shadow),
-          (Rect.fromLTRB(0, under, size.width, size.height), out),
-        ]) {
-          canvas.save();
-          canvas.clipRect(part);
-          _faded(canvas, size, view, alpha, copies);
-          canvas.restore();
+    // The peptide followed: its card, the pair's light, its name and x.
+    final int p = view.peptide;
+    final TracePeptide peptide = view.focus;
+    final List<int> ids = TokeniseScene.frameOf(trace, p);
+    final int residues = peptide.sequence.length;
+    if (fade.card > 0) {
+      final Rect batch = unfold >= 1 ? layout.card(p) : Rect.lerp(end.card(p), layout.card(p), unfold)!;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(move > 0 ? Rect.lerp(batch, solo.card, move)! : batch, const Radius.circular(6)),
+        Paint()..color = _ink(view.inks.followed, fade.card),
+      );
+    }
+    drawPair(canvas, view, solo, _span(beat, _pair) * fade.chrome);
+    final double label = named * fade.chrome * fade.focusLabel;
+    if (label > 0) {
+      view.kit.draw(
+        canvas,
+        '${peptide.source.label} · $residues aa',
+        inked(view.kit.sans, 10, view.inks.signal, alpha: label),
+        Offset.lerp(Offset(layout.left, layout.rowTop(p)), solo.name, move)!,
+      );
+    }
+    if (fade.focusX) {
+      // Past the places the peptide keeps alone, the batch's padding and the
+      // frame's last place, going with the other peptides.
+      for (int k = solo.xCount; k < ids.length; k++) {
+        double alpha = 1 - _span(beat, _others);
+        if (k == ids.length - 1) {
+          alpha *= 1 - _span(beat, _lastOut);
         }
+        drawPlace(canvas, view, xAt(p, k), ids, k, residues, alpha, settled: unfold);
+      }
+      for (int k = 0; k < solo.xCount; k++) {
+        final Rect at = move > 0 ? Rect.lerp(xAt(p, k), solo.x(k), move)! : xAt(p, k);
+        final double alpha = k >= peptide.inputs ? 1 - dimmed * dim : 1;
+        drawPlace(canvas, view, at, ids, k, residues, alpha, settled: unfold, letter: move);
       }
     }
-    _names(canvas, view, layout, beat, fade);
+    // The copy, over x as it falls, faded as one picture until it lands.
+    final double lift = _span(beat, _lift);
+    if (lift > 0 && fade.y > 0) {
+      final double out = lift * (_ghost + (1 - _ghost) * _span(beat, _land)) * fade.y;
+      _faded(canvas, size, view, out, () => _y(canvas, view, solo, beat, lift, Offset(fade.ySlide, 0), dim));
+    }
+    _names(canvas, view, layout, solo, beat, fade);
 
     // What Tokenise retires, fading where it stands, drawn as Tokenise drew
     // it, over its rows.
@@ -170,76 +207,76 @@ final class ShiftScene extends LmScene {
     }
   }
 
-  /// [p]'s y: a copy of its peptide in x, lifting off x as its shadow
-  /// ([lift] of the way) and falling to its place under x, then each line
-  /// moving one place left, a place's own token leaving it for the one after
-  /// it; `<bos>` going off at the left, and the token that leaves the second
-  /// line's start coming in at the first line's end. Moved, each slot under
-  /// the place of x whose target it is.
-  void _y(
-    Canvas canvas,
-    LmView view,
-    ShiftLayout layout,
-    int p,
-    double beat,
-    double lift,
-    double shown,
-    Offset away,
-    double dim,
-    ShiftFade fade,
-  ) {
+  /// The followed peptide's y: a copy of its x, lifting off x as its shadow
+  /// ([lift] of the way) and falling into the room under each line, then
+  /// moving one place left, a place's own token leaving it for the one
+  /// before; `<bos>` going off at the left, and the token that leaves a
+  /// line's start coming in at the end of the line above. Moved, each slot
+  /// under the place of x whose target it is, and the place under x's
+  /// `<eos>`, whose answer is padding, dimmed in.
+  void _y(Canvas canvas, LmView view, SoloLayout solo, double beat, double lift, Offset away, double dim) {
     final TrainingTrace trace = view.trace;
-    final TracePeptide peptide = trace.peptides[p];
-    final bool focus = p == view.peptide;
-    final List<int> ids = TokeniseScene.frameOf(trace, p);
+    final TracePeptide peptide = view.focus;
+    final List<int> ids = TokeniseScene.frameOf(trace, view.peptide);
     final int residues = peptide.sequence.length;
-    // From x's place, a little way down as it lifts, then the rest of the
-    // way to y's.
-    final double fall = _span(beat, _fall);
-    final double down = _shadowDrop * lift + (layout.drop - _shadowDrop) * fall;
-    final Offset come = Offset(0, down - layout.drop) + away;
-    if (focus && fade.card > 0) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(layout.yCard(p).shift(come), const Radius.circular(6)),
-        Paint()..color = _ink(view.inks.followed, fade.card * shown),
-      );
-    }
-    view.kit.draw(
-      canvas,
-      '${peptide.source.label} · $residues aa',
-      inked(view.kit.sans, 10, focus ? view.inks.signal : view.inks.quiet, alpha: shown * (focus ? fade.chrome : 1)),
-      Offset(layout.left, layout.yRowTop(p)) + come,
-    );
-    final Color number = focus ? view.inks.signal : calm(view);
     final double slide = _span(beat, _slide);
     if (slide >= 1) {
-      for (int i = 0; i < ids.length - 1; i++) {
-        final double padded = i >= peptide.inputs ? 1 - dimmed * dim : 1;
-        drawPlace(canvas, view, layout.y(p, i).shift(come), ids, i + 1, residues, shown * padded, number: number);
+      for (int i = 0; i < peptide.inputs; i++) {
+        drawPlace(canvas, view, solo.y(i).shift(away), ids, i + 1, residues, 1, letter: 1);
+      }
+      if (solo.xCount > peptide.inputs && dim > 0) {
+        final int i = peptide.inputs;
+        drawPlace(canvas, view, solo.y(i).shift(away), ids, i + 1, residues, (1 - dimmed) * dim);
       }
       return;
     }
-    final Offset left = Offset(-layout.step * slide, 0);
-    canvas.save();
-    if (slide > 0) {
+    final double fall = _span(beat, _fall);
+    final Offset left = Offset(-solo.step * slide, 0) + away;
+    for (int k = 0; k < solo.places; k++) {
+      // From x's place, a little way down as it lifts, then the rest of the
+      // way to y's; the frame's last place, which x let go of, comes back
+      // as the copy falls.
+      final Rect from = solo.x(k).shift(Offset(0, _shadowDrop * lift));
+      final Rect at = Rect.lerp(from, solo.y(k), fall)!;
+      final double back = k >= solo.xCount ? fall : 1;
+      if (slide <= 0) {
+        drawPlace(canvas, view, at, ids, k, residues, back, letter: 1);
+        continue;
+      }
       // Moving, a line keeps to its columns: what leaves it goes off its
-      // edge.
-      canvas.clipRect(Rect.fromLTRB(layout.left, -1e4, layout.columnsRight, 1e4));
-    }
-    for (int k = 0; k < ids.length; k++) {
-      final Rect at = layout.y(p, k).shift(left + come);
-      // A line's first token goes off its left end; the frame's last place,
-      // which x let go of, comes back as the copy falls.
-      final bool first = k == 0 || k == layout.firstLine;
-      final double back = k == ids.length - 1 ? fall : 1;
-      drawPlace(canvas, view, at, ids, k, residues, shown * back * (first ? 1 - slide : 1), number: number);
-      if (k == layout.firstLine && slide > 0) {
-        // And comes in at the end of the line before, as text reflows.
-        final Rect end = layout.y(p, k - 1).shift(Offset(layout.step, 0) + left + come);
-        drawPlace(canvas, view, end, ids, k, residues, shown * slide, number: number);
+      // edge, and comes in at the end of the line above.
+      final bool first = k % solo.columns == 0;
+      canvas.save();
+      canvas.clipRect(solo.yLine(k ~/ solo.columns));
+      drawPlace(canvas, view, at.shift(left), ids, k, residues, back * (first ? 1 - slide : 1), letter: 1);
+      canvas.restore();
+      if (first && k > 0) {
+        canvas.save();
+        canvas.clipRect(solo.yLine((k - 1) ~/ solo.columns));
+        final Rect end = solo.y(k - 1).shift(Offset(solo.step, 0) + left);
+        drawPlace(canvas, view, end, ids, k, residues, slide, letter: 1);
+        canvas.restore();
       }
     }
-    canvas.restore();
+  }
+
+  /// The pair worked, at [lit]: the place followed in x and its answer in y
+  /// under it on one light, the tracer's, as Predict lights what came next;
+  /// and the place after it in x, whose token the answer is, on half of it.
+  static void drawPair(Canvas canvas, LmView view, SoloLayout solo, double lit) {
+    if (lit <= 0) {
+      return;
+    }
+    final int k = view.position;
+    final double pad = solo.lightPad;
+    void light(Rect rect, double share) => canvas.drawRRect(
+      RRect.fromRectAndRadius(rect.inflate(pad), Radius.circular(pad + solo.side * 0.18)),
+      Paint()..color = view.inks.truth.withValues(alpha: PredictScene.answerLight * lit * share),
+    );
+    light(Rect.fromLTRB(solo.x(k).left, solo.x(k).top, solo.x(k).right, solo.y(k).bottom), 1);
+    if (k + 1 < solo.xCount) {
+      light(solo.x(k + 1), _nextLight);
+    }
   }
 
   /// [color] at [alpha] of its own.
@@ -258,9 +295,10 @@ final class ShiftScene extends LmScene {
   }
 
   /// Place [k] of a frame as Shift draws it: an end as a token, a residue
-  /// as its id, in [number] (the accent where not given). Padding, a token
-  /// as Tokenise draws it, [settled] of the way to its outline alone, faint:
-  /// a quarter of the batch's places, holding nothing.
+  /// as its id, in [number] (the accent where not given), with its letter
+  /// over it [letter] of the way, the id making room for it. Padding, a
+  /// token as Tokenise draws it, [settled] of the way to its outline alone,
+  /// faint: a quarter of the batch's places, holding nothing.
   static void drawPlace(
     Canvas canvas,
     LmView view,
@@ -271,6 +309,7 @@ final class ShiftScene extends LmScene {
     double alpha, {
     Color? number,
     double settled = 1,
+    double letter = 0,
   }) {
     if (alpha <= 0) {
       return;
@@ -285,9 +324,37 @@ final class ShiftScene extends LmScene {
         alpha: pad ? alpha * (1 - (1 - padding) * settled) : alpha,
         mark: pad ? 1 - settled : 1,
       );
-    } else {
-      drawIdTile(canvas, view, rect, ids[k], alpha: alpha, numberScale: numberScale, number: number);
+      return;
     }
+    if (letter <= 0) {
+      drawIdTile(canvas, view, rect, ids[k], alpha: alpha, numberScale: numberScale, number: number);
+      return;
+    }
+    drawIdTile(
+      canvas,
+      view,
+      rect,
+      ids[k],
+      alpha: alpha,
+      numberScale: _lerp(numberScale, _letteredScale, letter),
+      number: number,
+      largest: _lerp(14, _letteredLargest, letter),
+      drop: _lerp(0.06, _letteredDrop, letter),
+    );
+    // The residue's letter in the tile's corner, under its stripe, where the
+    // tile is large enough to carry it.
+    final Rect tile = rect.deflate(math.min(1.0, rect.width * 0.08));
+    final double size = math.min(tile.height * _letterShare, _letterLargest);
+    if (size < _letterLeast) {
+      return;
+    }
+    final double band = tile.height < 11 ? tile.height * 0.4 : math.max(1.5, tile.height * 0.14);
+    view.kit.draw(
+      canvas,
+      view.trace.token(ids[k]),
+      inked(view.kit.mono, size, view.inks.ink, alpha: alpha * letter),
+      Offset(tile.left + tile.width * 0.12, tile.top + band + tile.height * 0.05),
+    );
   }
 
   /// How strong padding is drawn once the peptides have opened out, of
@@ -299,21 +366,44 @@ final class ShiftScene extends LmScene {
   /// nothing to mark.
   static Color calm(LmView view) => view.inks.quiet;
 
-  /// x and y named, each on a tag over its peptides, and what each is for
-  /// beside it: the model reads x; y is the answer key its guesses are
-  /// graded against, which never goes in.
-  void _names(Canvas canvas, LmView view, ShiftLayout layout, double beat, ShiftFade fade) {
+  /// x and y named, each on a tag, and what each is for beside it: the model
+  /// reads x; y is the answer key its guesses are graded against, which
+  /// never goes in. x's tag moves from over the batch to over the peptide
+  /// followed; and each line is headed by what it is, x or y.
+  void _names(Canvas canvas, LmView view, ShiftLayout layout, SoloLayout solo, double beat, ShiftFade fade) {
+    final double move = _span(beat, _move);
     final double x = _span(beat, _xNamed) * fade.chrome;
     final double y = _span(beat, _yNamed) * fade.chrome;
-    for (final (String name, List<String> role, double top, double alpha) in <(String, List<String>, double, double)>[
-      ('input x', <String>['what the model reads'], layout.xTag, x),
-      ('target y', <String>['the answer key: what each place should predict', 'the answer key'], layout.yTag, y),
+    for (final (String name, List<String> role, Offset at, double alpha) in <(String, List<String>, Offset, double)>[
+      (
+        'input x',
+        <String>['what the model reads'],
+        Offset.lerp(Offset(layout.tagStart, layout.xTag), solo.xTag, move)!,
+        x,
+      ),
+      ('target y', <String>['the answer key: what each place should predict', 'the answer key'], solo.yTag, y),
     ]) {
       if (alpha <= 0) {
         continue;
       }
-      final Rect plate = drawTag(canvas, view, name, Offset(layout.tagStart, top), alpha: alpha);
+      final Rect plate = drawTag(canvas, view, name, at, alpha: alpha);
       drawRole(canvas, view, role, plate, layout.right + 6, alpha);
+    }
+    for (int line = 0; line < solo.lines; line++) {
+      for (final (String head, Rect row, double alpha) in <(String, Rect, double)>[
+        ('x', solo.xLine(line), _span(beat, _xHeads) * fade.chrome),
+        ('y', solo.yLine(line), y),
+      ]) {
+        if (alpha > 0) {
+          view.kit.draw(
+            canvas,
+            head,
+            inked(view.kit.mono, solo.headSize, view.inks.quiet, alpha: alpha),
+            Offset(solo.headX, row.center.dy),
+            anchor: const Offset(0, 0.5),
+          );
+        }
+      }
     }
   }
 
@@ -334,23 +424,42 @@ final class ShiftScene extends LmScene {
     }
   }
 
+  /// At the end, a place of the peptide followed, in x or in y.
   @override
-  LmHit? hit(Size size, LmView view, Offset at) => _focusAt(size, view, at, 1);
+  LmHit? hit(Size size, LmView view, Offset at) => _placeAt(size, view, at);
 
+  /// While the batch shows, a peptide; once the one followed has come
+  /// forward, a place of it; while it moves, nothing.
   @override
-  LmHit? hitAt(Size size, LmView view, Offset at, TrainingFrame frame) =>
-      _focusAt(size, view, at, _span(frame.local * LmStage.shift.beats, _unfold).roundToDouble());
+  LmHit? hitAt(Size size, LmView view, Offset at, TrainingFrame frame) {
+    final double beat = frame.local * LmStage.shift.beats;
+    if (beat < _move.$1) {
+      return _focusAt(size, view, at, _span(beat, _unfold).roundToDouble());
+    }
+    return beat >= _move.$2 ? _placeAt(size, view, at) : null;
+  }
 
-  /// The peptide whose row of the matrix, or whose card in x or y, lies
-  /// under [at].
+  /// The peptide whose row of the matrix, or whose card, lies under [at].
   LmHit? _focusAt(Size size, LmView view, Offset at, double unfold) {
     final ShiftLayout layout = ShiftLayout(size, view);
     final TokeniseEnd end = TokeniseEnd(size, view);
     for (int p = 0; p < view.trace.peptides.length; p++) {
-      for (final Rect card in unfold >= 1 ? <Rect>[layout.card(p), layout.yCard(p)] : <Rect>[end.card(p)]) {
-        if (at.dy >= card.top && at.dy < card.bottom + 1) {
-          return FocusPeptide(p);
-        }
+      final Rect card = unfold >= 1 ? layout.card(p) : end.card(p);
+      if (at.dy >= card.top && at.dy < card.bottom + 1) {
+        return FocusPeptide(p);
+      }
+    }
+    return null;
+  }
+
+  /// The place of the peptide followed whose column, in x or in y, lies
+  /// under [at]: one of those graded.
+  LmHit? _placeAt(Size size, LmView view, Offset at) {
+    final SoloLayout solo = SoloLayout(size, view);
+    for (int k = 0; k < view.focus.inputs; k++) {
+      final Rect column = Rect.fromLTRB(solo.x(k).left, solo.x(k).top, solo.x(k).right, solo.y(k).bottom);
+      if (column.inflate(solo.gap / 2).contains(at)) {
+        return FocusPosition(k);
       }
     }
     return null;
@@ -360,24 +469,37 @@ final class ShiftScene extends LmScene {
   String caption(LmView view, TrainingFrame frame) {
     final TrainingTrace trace = view.trace;
     final double beat = frame.local * LmStage.shift.beats;
-    if (beat < _copyCaption) {
+    if (beat < _focusCaption) {
       return 'Input x: each frame less its last place, '
           '${trace.peptides.length} × ${trace.width} tokens';
     }
-    if (beat < _slideCaption) {
-      return 'Target y starts as a copy of the same peptides';
+    if (beat < _copyCaption) {
+      return 'The peptide followed, alone: ${view.focus.source.label}, '
+          '${grouped(SoloLayout.placesOfX(trace, view.peptide))} places of x';
     }
-    if (beat < _madeCaption) {
+    if (beat < _slideCaption) {
+      return 'Target y starts as a copy of the same peptide';
+    }
+    if (beat < _pairCaption) {
       return "One place to the left: each place's answer is the token after it";
     }
-    return 'Only x goes in; Loss grades each guess against y: ${grouped(trace.targetCount)} targets';
+    if (beat < _madeCaption) {
+      final int k = view.position;
+      String token(int id) => '${trace.token(id)} ($id)';
+      return 'Place $k: x reads ${token(trace.inputAt(view.peptide, k))}, '
+          'y holds ${token(view.target)}, the token at place ${k + 1}';
+    }
+    return 'Only x goes in; Loss grades each guess against y: '
+        '${grouped(view.focus.inputs)} targets here, ${grouped(trace.targetCount)} in the batch';
   }
 
   @override
   String describe(LmView view, TrainingFrame frame) {
     final TracePeptide focus = view.focus;
+    final bool alone = frame.local * LmStage.shift.beats >= _move.$1;
     return 'Shift. ${caption(view, frame)}. Followed: ${focus.source.label}, '
-        '${focus.sequence.length} residues; tap another peptide to follow it.';
+        '${focus.sequence.length} residues; '
+        '${alone ? 'tap a place to follow it' : 'tap another peptide to follow it'}.';
   }
 
   /// Shift's own page: what it takes and gives, then what x and y each are
@@ -389,10 +511,10 @@ final class ShiftScene extends LmScene {
     final int peptides = trace.peptides.length;
     final int asked = unasked(trace);
     String special(String name) => '$name (${glyph(trace, trace.vocab.indexOf(name))})';
-    final String dimmed = switch (asked) {
+    final String unscored = switch (asked) {
       0 => '.',
-      1 => '; the one place whose answer would be padding is dimmed, with nothing to score.',
-      _ => '; the ${grouped(asked)} places whose answer would be padding are dimmed, with nothing to score.',
+      1 => '; the one place of x whose answer would be padding is never scored.',
+      _ => '; the ${grouped(asked)} places of x whose answer would be padding are never scored.',
     };
     return LmInfo(
       title: LmStage.shift.label,
@@ -407,14 +529,14 @@ final class ShiftScene extends LmScene {
         ]),
         LmInfoSection('Target y', <String>[
           'The answer key, never fed in: ${LmStage.loss.label} scores each guess against it. A peptide of n '
-              'residues gives n + 1 answers, its residues and ${special('<eos>')}$dimmed',
+              'residues gives n + 1 answers, its residues and ${special('<eos>')}$unscored',
         ]),
       ],
     );
   }
 
   /// How many of x's places are asked nothing: those whose answer in y would
-  /// be padding, which the stage dims.
+  /// be padding.
   static int unasked(TrainingTrace trace) => trace.peptides.length * trace.width - trace.targetCount;
 }
 
@@ -454,10 +576,12 @@ final class ShiftFade {
   final double focusLabel;
 }
 
-/// Top to bottom: the input x tag and the peptides, each its name and its
-/// lines, folded onto two where that leaves its tiles room for their
-/// numbers, else on one; then, set well apart, the next token y tag and the
-/// peptides again, in the same columns. The tiles are as large as the width
+/// The batch as Shift opens it out: top to bottom, the input x tag and the
+/// peptides, each its name and its lines, folded onto two where that leaves
+/// its tiles room for their numbers, else on one; under them the room the
+/// batch's y once took (until 2026-11-16, when y came to be drawn for the
+/// peptide followed alone, `SoloLayout`), kept so the batch opens out as it
+/// always has. The tiles are as large as the width
 /// and the height both allow once the peptides have room between them,
 /// their columns spread across the width, and the whole is centred.
 final class ShiftLayout {
@@ -567,14 +691,12 @@ final class ShiftLayout {
   late final double firstRow;
   late final double yTag;
 
-  /// How far y lies under x.
+  /// How far the batch's y lay under x.
   late final double drop;
 
   double get tagStart => cardLeft;
 
   double rowTop(int peptide) => firstRow + peptide * rowPitch;
-
-  double yRowTop(int peptide) => rowTop(peptide) + drop;
 
   /// Place [k] of [peptide]'s frame, in x.
   Rect x(int peptide, int k) {
@@ -587,14 +709,139 @@ final class ShiftLayout {
     );
   }
 
-  /// Place [i] of [peptide] in y, in the same column as in x.
-  Rect y(int peptide, int i) => x(peptide, i).shift(Offset(0, drop));
-
   /// The card under [peptide] in focus, in x, round its name and its lines,
   /// clear of the peptides beside it.
   Rect card(int peptide) =>
       Rect.fromLTRB(cardLeft, rowTop(peptide) - 3, right + 6, rowTop(peptide) + block + 2);
+}
 
-  /// The card under [peptide] in focus, in y.
-  Rect yCard(int peptide) => card(peptide).shift(Offset(0, drop));
+/// The peptide followed, alone, as Shift brings it forward: top to bottom,
+/// the input x and target y tags, then its card, its name and its places,
+/// folded onto as many lines as make its tiles largest, each line of x with
+/// its line of y right under it, a place of y under the same place of x.
+/// Each line is headed x or y at its left. The tiles are as large as the
+/// width and the height both allow, to [_largest]; the whole is centred.
+final class SoloLayout {
+  SoloLayout(Size size, LmView view) : right = size.width - 16 {
+    final TrainingTrace trace = view.trace;
+    final int residues = view.focus.sequence.length;
+    places = residues + 2;
+    xCount = placesOfX(trace, view.peptide);
+    tag = tagSize(view, 'input x').height;
+    final double room =
+        size.height - 2 * _edge - 2 * tag - _tagsGap - _tagGap - ShiftLayout.label - 2 * _cardPad;
+    final double across = right - left - _headRoom;
+    // The fold that makes the tiles largest: as many columns as the width
+    // and the lines' height both allow; of two the same, the fewer lines.
+    double best = 0;
+    int bestColumns = places;
+    for (int c = 1; c <= places; c++) {
+      final int n = (places + c - 1) ~/ c;
+      final double wide = across / c * (1 - _gapShare);
+      final double tall = (room - n * _pairGap - (n - 1) * _lineGap) / (2 * n);
+      final double tile = math.min(_largest, math.min(wide, tall));
+      if (tile >= best) {
+        best = tile;
+        bestColumns = c;
+      }
+    }
+    columns = bestColumns;
+    lines = (places + columns - 1) ~/ columns;
+    side = math.max(1, best);
+    step = side / (1 - _gapShare);
+    gap = step - side;
+    final double block = (columns - 1) * step + side;
+    columnsLeft = left + _headRoom + (across - block) / 2;
+    headX = columnsLeft - _headRoom;
+    columnsRight = columnsLeft + block;
+    final double drawn = lines * (2 * side + _pairGap) + (lines - 1) * _lineGap;
+    final double content = 2 * tag + _tagsGap + _tagGap + ShiftLayout.label + 2 * _cardPad + drawn;
+    final double top = math.max(_edge, (size.height - content) / 2);
+    xTag = Offset(headX - _cardSide, top);
+    yTag = Offset(headX - _cardSide, top + tag + _tagsGap);
+    final double cardTop = top + 2 * tag + _tagsGap + _tagGap;
+    name = Offset(headX, cardTop + _cardPad);
+    firstLine = name.dy + ShiftLayout.label;
+    card = Rect.fromLTRB(headX - _cardSide, cardTop, columnsRight + _cardSide, firstLine + drawn + _cardPad);
+    headSize = (side * 0.4).clamp(8.0, 11.0);
+    lightPad = math.min(3, gap / 2 + 1);
+  }
+
+  /// How many places of the peptide's frame x keeps: `<bos>`, its residues
+  /// and `<eos>`, but where `<eos>` is the frame's last place, which x lets
+  /// go of.
+  static int placesOfX(TrainingTrace trace, int peptide) =>
+      math.min(trace.peptides[peptide].sequence.length + 2, trace.width);
+
+  /// From the canvas's edge, between the two tags, from the tags to the
+  /// card, and inside the card above and under its contents and at its
+  /// sides.
+  static const double _edge = 6;
+  static const double _tagsGap = 4;
+  static const double _tagGap = 12;
+  static const double _cardPad = 4;
+  static const double _cardSide = 6;
+
+  /// Between a line of x and its line of y, and between one pair of lines
+  /// and the next: enough to read them as pairs.
+  static const double _pairGap = 3;
+  static const double _lineGap = 14;
+
+  /// The room for a line's head, x or y.
+  static const double _headRoom = 14;
+
+  /// The share of a column between two tiles, and the largest a tile is
+  /// drawn.
+  static const double _gapShare = 0.1;
+  static const double _largest = 40;
+
+  final double left = 20;
+  final double right;
+
+  /// The places drawn: `<bos>`, the residues and `<eos>`; and how many of
+  /// them x keeps.
+  late final int places;
+  late final int xCount;
+
+  /// The fold: columns a line, lines.
+  late final int columns;
+  late final int lines;
+
+  /// A tile's side, from one column to the next, and between two tiles.
+  late final double side;
+  late final double step;
+  late final double gap;
+
+  late final double columnsLeft;
+  late final double columnsRight;
+
+  /// Where the lines' heads start, and how large they are written.
+  late final double headX;
+  late final double headSize;
+
+  late final double tag;
+  late final Offset xTag;
+  late final Offset yTag;
+
+  /// The card round the name and the lines, the name's top left, and the
+  /// first line's top.
+  late final Rect card;
+  late final Offset name;
+  late final double firstLine;
+
+  /// How far the pair's light reaches past its tiles.
+  late final double lightPad;
+
+  double _lineTop(int line) => firstLine + line * (2 * side + _pairGap + _lineGap);
+
+  /// Place [k] in x.
+  Rect x(int k) => Rect.fromLTWH(columnsLeft + (k % columns) * step, _lineTop(k ~/ columns), side, side);
+
+  /// Place [i] in y, right under the same place in x.
+  Rect y(int i) => x(i).shift(Offset(0, side + _pairGap));
+
+  /// Line [line] of x, and of y, from the first column to the last.
+  Rect xLine(int line) => Rect.fromLTWH(columnsLeft, _lineTop(line), columnsRight - columnsLeft, side);
+
+  Rect yLine(int line) => xLine(line).shift(Offset(0, side + _pairGap));
 }

@@ -10,7 +10,7 @@ import '../../../shared/motion/animation_timeline.dart';
 /// its own beats is `LoopPace`'s.
 enum LmStage {
   tokenise('Tokenise', 11),
-  shift('Shift', 5),
+  shift('Shift', 10),
   embedding('Embedding', 15),
   scores('Scores', 20),
   attention('Attention', 25),

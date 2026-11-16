@@ -30,7 +30,7 @@ import 'tokenise_scene.dart';
 final class EmbeddingScene extends LmScene {
   const EmbeddingScene();
 
-  // The opening: y goes off to the right and the other peptides fade; the
+  // The opening: y goes off to the right and the tags and the card fade; the
   // peptide in focus comes down to the foot; the table's tokens come in, top
   // to bottom, and its rows grow out from them, their numbers after.
   static const (double, double) _away = (0.0, 0.5);
@@ -106,7 +106,7 @@ final class EmbeddingScene extends LmScene {
     final EmbeddingLayout layout = EmbeddingLayout(size, view);
     if (beat < _away.$2 + 0.01) {
       // Shift's last frame, but for the row in focus, which is drawn here:
-      // y goes off to the right, the rest fades.
+      // y goes off to the right, the tags, heads, card and pair fade.
       final double away = _span(beat, _away);
       const ShiftScene().paintEnd(
         canvas,
@@ -116,7 +116,7 @@ final class EmbeddingScene extends LmScene {
           focusX: false,
           others: 1 - away,
           y: 1 - away,
-          ySlide: away * (layout.shift.right + 6 - layout.shift.cardLeft),
+          ySlide: away * (size.width - layout.solo.card.left),
           chrome: 1 - away,
           card: 1 - away,
           focusLabel: 0,
@@ -723,7 +723,8 @@ final class EmbeddingScene extends LmScene {
   }
 
   /// The peptide in focus, x's row of it: its places come down from Shift's
-  /// to the foot, its ids kept, the rest, whose targets are padding, gone;
+  /// to the foot, its ids kept and its letters going, the place whose
+  /// target is padding gone;
   /// each lit while it reads; then each goes up to label its row, turning
   /// back into its residue.
   void _focusRow(Canvas canvas, LmView view, EmbeddingLayout layout, double beat, EmbeddingFade fade) {
@@ -739,7 +740,7 @@ final class EmbeddingScene extends LmScene {
     final double named = 1 - through(beat, _gatherFrom + _gatherStagger, _gatherFrom + _gatherStagger + 0.5);
     if (named > 0) {
       final Offset at = Offset.lerp(
-        Offset(layout.shift.left, layout.shift.rowTop(p)),
+        layout.solo.name,
         Offset(layout.foot(0).left, layout.footTop - ShiftLayout.label),
         descend,
       )!;
@@ -750,8 +751,8 @@ final class EmbeddingScene extends LmScene {
         at,
       );
     }
-    for (int k = 0; k < ids.length - 1; k++) {
-      final Rect from = layout.shift.x(p, k);
+    for (int k = 0; k < layout.solo.xCount; k++) {
+      final Rect from = layout.solo.x(k);
       if (k >= n) {
         _tile(canvas, view, from, ids, k, residues, (1 - ShiftScene.dimmed) * (1 - descend));
         continue;
@@ -778,7 +779,7 @@ final class EmbeddingScene extends LmScene {
       }
       final Rect foot = Rect.lerp(from, layout.foot(k), descend)!;
       if (gather <= 0) {
-        _tile(canvas, view, foot, ids, k, residues, 1);
+        _tile(canvas, view, foot, ids, k, residues, 1, letter: 1 - descend);
         final double lit = _lit(_lookup(k, n, beat));
         if (lit > 0) {
           canvas.drawRRect(
@@ -801,9 +802,18 @@ final class EmbeddingScene extends LmScene {
     }
   }
 
-  /// A place of Shift's x, as it draws it.
-  static void _tile(Canvas canvas, LmView view, Rect rect, List<int> ids, int k, int residues, double alpha) =>
-      ShiftScene.drawPlace(canvas, view, rect, ids, k, residues, alpha);
+  /// A place of Shift's x, as it draws it, with its letter [letter] of the
+  /// way.
+  static void _tile(
+    Canvas canvas,
+    LmView view,
+    Rect rect,
+    List<int> ids,
+    int k,
+    int residues,
+    double alpha, {
+    double letter = 0,
+  }) => ShiftScene.drawPlace(canvas, view, rect, ids, k, residues, alpha, letter: letter);
 
   /// [draw], at [alpha] as a whole.
   static void _faded(Canvas canvas, Size size, LmView view, double alpha, VoidCallback draw) {
@@ -933,7 +943,7 @@ final class EmbeddingFade {
 /// its name, a tile a place, on one line.
 final class EmbeddingLayout {
   EmbeddingLayout(Size size, LmView view)
-    : shift = ShiftLayout(size, view),
+    : solo = SoloLayout(size, view),
       right = size.width - _side,
       kit = view.kit,
       places = view.focus.inputs {
@@ -999,8 +1009,8 @@ final class EmbeddingLayout {
   /// its colours alone.
   static const double leastNumber = 5.5;
 
-  /// Shift's layout, which the stage opens on.
-  final ShiftLayout shift;
+  /// Shift's layout of the peptide followed, which the stage opens on.
+  final SoloLayout solo;
 
   final LmKit kit;
 

@@ -106,7 +106,8 @@ before, as a tap on its name does.
    answer key" where a phone is too narrow). Only x goes into the model;
    y is what Loss grades its guesses against, which is where it comes back
    (the user's choice of the two, the same day). It opens on Tokenise's
-   last frame, pixel for pixel, and is 5 beats:
+   last frame, pixel for pixel, and was 5 beats (10 since 2026-11-16, see
+   "The peptide followed, alone" below):
    - *the open* (1½ beats): the vocabulary's list, bars, counts and tags
      fade; each row of the matrix opens out into its peptide again, named,
      under the `input x` tag, and lets go of the frame's last place, which
@@ -184,6 +185,49 @@ before, as a tap on its name does.
    A test holds all three: the room (or the snug tile) at four sizes,
    accent pixels under the followed peptide's name only, in x and in y, and
    padding fainter than Tokenise's outline yet drawn.
+
+   **The peptide followed, alone** (the user's picks of 2026-11-16, asked
+   with previews, after a screenshot of the Pro Max's end: x's and y's
+   insulin A ~500 pt apart, so the one-place shift had to be worked out,
+   and each line's wrap read as a jump). The batch stays as it opens; the
+   copy no longer comes there. 5 → 10 beats:
+   - *the open*, as above, to 1.4 beats;
+   - *alone* (1.6 → 3.8): the other peptides, their names and every
+     peptide's padding fade over 1.4 beats, slowly, while the followed
+     card stays; from 2.6 its places fly to where they stand alone
+     (`SoloLayout`), growing, its card, name and the `input x` tag going
+     with them ("The peptide followed, alone: insulin A chain, 23 places of
+     x"). Only its own places: `<bos>`, its residues and `<eos>` (x lets
+     go of a 39-residue peptide's `<eos>`, the frame's last place, as
+     before). The tiles are the largest the canvas allows, to 40 pt, the
+     fold chosen for it (insulin A at 440 wide: 8 a line, 3 lines), each
+     line of x with a line's room under it, 3 pt down, and 14 pt to the
+     next pair; each line headed `x` or `y` at its left in the quiet ink,
+     x's once its lines have come to them.
+     A residue's tile carries its letter, small, in its corner under its
+     stripe, the id lowered and smaller to make room
+     (`ShiftScene.drawPlace(letter:)`, `drawIdTile(largest:, drop:)`, both
+     defaults the old tile), the letter coming in as the tile grows;
+   - *the copy* (4.0 → 5.0): x's copy lifts a few points and falls into the
+     room under each line, the `target y` tag coming in under `input x`
+     ("Target y starts as a copy of the same peptide");
+   - *the move* (5.4 → 6.8): the copy moves one place left; `<bos>` slips
+     off; a line's first token comes in at the end of the line above;
+   - *the padding* (7.0 → 7.5): x's `<eos>` dims, and under it the place
+     whose answer is padding comes in, an outline dimmed;
+   - *one pair* (7.6 → 9): the place followed, in x and the y under it, on
+     the tracer's soft light as Predict lights what came next, the place
+     after it in x at half that light, whose token it is (insulin A at its
+     middle: "Place 11: x reads C (4), y holds S (18), the token at place
+     12"); then "Only x goes in;
+     Loss grades each guess against y: 22 targets here, 180 in the batch".
+   Interleaved lines were tried for the whole batch on 2026-10-30 and read
+   as four alternating lines a peptide; for one peptide, with a line's
+   head naming each, they are the user's pick. In the batch a tap follows
+   a peptide; on the peptide alone a place, in x or y (`FocusPosition`),
+   which the pair and its caption follow; while it moves, nothing.
+   Embedding opens on the end pixel for pixel: its tiles come down from
+   their large places to the foot, their letters going.
 3. **Embedding.** The user's ask of 2026-10-30: the lookup Forward used to
    open with, as a stage of its own, the table 16 numbers wide across the
    whole width and every number written out on a soft tile of its colour

@@ -191,7 +191,7 @@ the service is asleep. `TrainingTrace.parse` refuses another run, another
 schema or an array of another shape; the payload's shape is the backend's
 `check_trace.py`.
 
-Twelve stages (`TrainingTimeline`, 266 beats), named on the shared
+Twelve stages (`TrainingTimeline`, 271 beats), named on the shared
 `StageBar`, which scrolls sideways at full size where a phone is too narrow
 for it (a stage played whose name is partly out of view is scrolled just
 far enough to show it whole, the bar's inset beyond it). The bar stands
@@ -207,7 +207,8 @@ its change, two seconds and one for every fourteen characters, five to
 eight, the motions under it slowed evenly, the speed easing over 0.15 beat
 either side of a caption's change. The run's stages so take 8.9 minutes →
 19.4 in all: Scores and Predict about 2.6× as long, Backward, Update and
-Loop 2×. A frame at a given point of a stage is what it was. The stage
+Loop 2×; Shift, 10 beats since 2026-11-16, 25 s → 45, and so 19.7 in all.
+A frame at a given point of a stage is what it was. The stage
 holds on its last frame (`TrainingTimeline.frameIn`); nothing runs on
 into the next stage, and a tap on the stage on screen plays it again. A
 sideways swipe over the canvas plays the next stage (leftwards) or the one
@@ -248,12 +249,24 @@ the same card and name. Embedding, which reads every place in turn and
 draws none as followed, takes no tap or drag. Shift
 opens on Tokenise's last frame, pixel for pixel (`TokeniseScene.paintEnd`,
 `TokeniseEnd`), and draws input x and next token y one place apart
-(`shift_scene.dart`): the batch opened out into its peptides, input x, what
-the model reads; under it a copy, target y, the answer key, in the same
-columns; and every line of the copy moved one place left, so that each place
-of y holds the token after the same place of x. Only x goes into the model;
-Loss grades its guesses against y. Embedding opens on Shift's last frame, pixel for
-pixel (`ShiftScene.paintEnd`, `ShiftLayout`), and in 15 beats draws the
+(`shift_scene.dart`, 10 beats): the batch opened out into its peptides,
+input x, what the model reads (`ShiftLayout`); then the other peptides and
+the padding go, slowly, and the followed one comes forward alone, its tiles
+grown as large as the canvas allows (to 40 pt), each id with its residue's
+letter in the corner, folded onto lines with a line of y's room under each
+(`SoloLayout`; the user's picks of 2026-11-16: the batch's x and y, 500 pt
+apart, hid the one-place shift); a copy, target y, the answer key, falls
+into that room, a place under the same place of x, and moves one place
+left, so that each place of y holds the token after the same place of x, a
+line's first token reflowing to the end of the line above; the place under
+x's `<eos>`, whose answer is padding, dims in; and the pair at the place
+followed is lit in the tracer, as Predict lights what came next, the place
+after it in x at half, its caption the pair's tokens. Only x goes into the
+model; Loss grades its guesses against y. A tap in the batch follows a
+peptide, and on the peptide alone a place, in x or in y (`FocusPosition`).
+Embedding opens on Shift's last frame, pixel for
+pixel (`ShiftScene.paintEnd`, `SoloLayout`: the followed peptide's tiles
+come down from their large places to the foot, their letters going), and in 15 beats draws the
 engine's steps from ids to x0 (`embedding_scene.dart`): the token embedding
 across the whole width, every number written out on a soft tile of its colour
 (`LmInks.cell`) to two places, and only where it fits; each id lighting the

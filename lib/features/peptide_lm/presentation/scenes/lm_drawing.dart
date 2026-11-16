@@ -439,7 +439,8 @@ const double idGrowth = 0.5;
 /// A token as its id: a plain tile under a stripe of its residue's colour,
 /// the id in the accent, or in [number] where given; an end of the frame or
 /// padding in the quiet ink. The number is [numberScale] of the tile's
-/// height, where its width lets it.
+/// height, where its width lets it, and never over [largest] points; its
+/// middle [drop] of the tile's height under the tile's.
 void drawIdTile(
   Canvas canvas,
   LmView view,
@@ -448,6 +449,8 @@ void drawIdTile(
   double alpha = 1,
   double numberScale = 0.52,
   Color? number,
+  double largest = 14,
+  double drop = 0.06,
 }) {
   if (alpha <= 0) {
     return;
@@ -483,7 +486,7 @@ void drawIdTile(
   final double perPoint = view.kit.layout(widest, inked(view.kit.mono, 10, view.inks.quiet)).width / 10;
   // Held to the half point below, so the drawn number is never wider.
   final double size =
-      (math.min(math.min(tile.height * numberScale + idGrowth, tile.width / perPoint), 14) * 2).floorToDouble() / 2;
+      (math.min(math.min(tile.height * numberScale + idGrowth, tile.width / perPoint), largest) * 2).floorToDouble() / 2;
   if (tile.height >= idNumbered && size >= 5) {
     view.kit.draw(
       canvas,
@@ -494,7 +497,7 @@ void drawIdTile(
         residue ? number ?? view.inks.signal : view.inks.quiet,
         alpha: alpha,
       ),
-      tile.center + Offset(0, tile.height * 0.06),
+      tile.center + Offset(0, tile.height * drop),
       anchor: const Offset(0.5, 0.5),
     );
   }
