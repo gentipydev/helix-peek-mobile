@@ -253,13 +253,16 @@ opens on Tokenise's last frame, pixel for pixel (`TokeniseScene.paintEnd`,
 input x, what the model reads (`ShiftLayout`); then the other peptides and
 the padding go, slowly, and the followed one comes forward alone, its tiles
 grown as large as the canvas allows (to 40 pt), each id with its residue's
-letter in the corner, folded onto lines with a line of y's room under each
-(`SoloLayout`; the user's picks of 2026-11-16: the batch's x and y, 500 pt
-apart, hid the one-place shift); a copy, target y, the answer key, falls
-into that room, a place under the same place of x, and moves one place
-left, so that each place of y holds the token after the same place of x, a
-line's first token reflowing to the end of the line above; the place under
-x's `<eos>`, whose answer is padding, dims in; and the pair at the place
+letter in the corner, folded onto lines (`SoloLayout`; the user's picks of
+2026-11-16: the batch's x and y, 500 pt apart, hid the one-place shift);
+then y is made as it once was for the whole batch (the user's ask the
+same day): a copy, target y, the answer key, lifts off x as its shadow,
+faint while over x, and falls as one block into a group of its own under
+x's card, named once it lands, a place of y in the same column as the
+same place of x, and moves one place left, so that each place of y holds
+the token after the same place of x, a line's first token reflowing to the
+end of the line above; the place under x's `<eos>`, whose answer is
+padding, dims in; and the pair at the place
 followed is lit in the tracer, as Predict lights what came next, the place
 after it in x at half, its caption the pair's tokens. Only x goes into the
 model; Loss grades its guesses against y. A tap in the batch follows a

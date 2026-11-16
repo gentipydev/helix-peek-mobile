@@ -46,9 +46,6 @@ final class ShiftScene extends LmScene {
   static const (double, double) _others = (1.6, 3.0);
   static const (double, double) _move = (2.6, 3.8);
 
-  /// x's line heads, once its lines have come to them.
-  static const (double, double) _xHeads = (3.5, 3.9);
-
   // The copy lifts off x as its shadow, falls into the room under each of
   // its lines, solid as it settles, and y is named as it lands; then it
   // moves one place left; then the place whose answer is padding dims, and
@@ -56,7 +53,7 @@ final class ShiftScene extends LmScene {
   static const (double, double) _lift = (4.0, 4.3);
   static const (double, double) _fall = (4.3, 5.0);
   static const (double, double) _land = (4.7, 5.0);
-  static const (double, double) _yNamed = (4.4, 4.9);
+  static const (double, double) _yNamed = (4.95, 5.35);
   static const (double, double) _slide = (5.4, 6.8);
   static const (double, double) _dim = (7.0, 7.5);
   static const (double, double) _pair = (7.6, 8.1);
@@ -77,6 +74,7 @@ final class ShiftScene extends LmScene {
   /// strong once it has come out under x, until it lands.
   static const double _shadowDrop = 3;
   static const double _ghost = 0.6;
+  static const double _overX = 0.2;
 
   /// How large an id is drawn in its tile, of the tile's height: larger
   /// than Tokenise draws it, the room the stage has being its tiles'.
@@ -185,11 +183,26 @@ final class ShiftScene extends LmScene {
         drawPlace(canvas, view, at, ids, k, residues, alpha, settled: unfold, letter: move);
       }
     }
-    // The copy, over x as it falls, faded as one picture until it lands.
+    // The copy, faded as one picture until it lands: faint while it lies
+    // over x, stronger once it has come out under x's card.
     final double lift = _span(beat, _lift);
     if (lift > 0 && fade.y > 0) {
-      final double out = lift * (_ghost + (1 - _ghost) * _span(beat, _land)) * fade.y;
-      _faded(canvas, size, view, out, () => _y(canvas, view, solo, beat, lift, Offset(fade.ySlide, 0), dim));
+      final double land = _span(beat, _land);
+      for (final (Rect clip, double strength) in <(Rect, double)>[
+        (Rect.fromLTRB(0, 0, size.width, solo.card.bottom), _overX),
+        (Rect.fromLTRB(0, solo.card.bottom, size.width, size.height), _ghost),
+      ]) {
+        canvas.save();
+        canvas.clipRect(clip);
+        _faded(
+          canvas,
+          size,
+          view,
+          lift * (strength + (1 - strength) * land) * fade.y,
+          () => _y(canvas, view, solo, beat, lift, Offset(fade.ySlide, 0), dim),
+        );
+        canvas.restore();
+      }
     }
     _names(canvas, view, layout, solo, beat, fade);
 
@@ -260,8 +273,8 @@ final class ShiftScene extends LmScene {
     }
   }
 
-  /// The pair worked, at [lit]: the place followed in x and its answer in y
-  /// under it on one light, the tracer's, as Predict lights what came next;
+  /// The pair worked, at [lit]: the place followed in x and its answer in y,
+  /// in the same column, each on the light, the tracer's, as Predict lights what came next;
   /// and the place after it in x, whose token the answer is, on half of it.
   static void drawPair(Canvas canvas, LmView view, SoloLayout solo, double lit) {
     if (lit <= 0) {
@@ -273,7 +286,8 @@ final class ShiftScene extends LmScene {
       RRect.fromRectAndRadius(rect.inflate(pad), Radius.circular(pad + solo.side * 0.18)),
       Paint()..color = view.inks.truth.withValues(alpha: PredictScene.answerLight * lit * share),
     );
-    light(Rect.fromLTRB(solo.x(k).left, solo.x(k).top, solo.x(k).right, solo.y(k).bottom), 1);
+    light(solo.x(k), 1);
+    light(solo.y(k), 1);
     if (k + 1 < solo.xCount) {
       light(solo.x(k + 1), _nextLight);
     }
@@ -369,7 +383,7 @@ final class ShiftScene extends LmScene {
   /// x and y named, each on a tag, and what each is for beside it: the model
   /// reads x; y is the answer key its guesses are graded against, which
   /// never goes in. x's tag moves from over the batch to over the peptide
-  /// followed; and each line is headed by what it is, x or y.
+  /// followed; y's stands over its own group.
   void _names(Canvas canvas, LmView view, ShiftLayout layout, SoloLayout solo, double beat, ShiftFade fade) {
     final double move = _span(beat, _move);
     final double x = _span(beat, _xNamed) * fade.chrome;
@@ -388,22 +402,6 @@ final class ShiftScene extends LmScene {
       }
       final Rect plate = drawTag(canvas, view, name, at, alpha: alpha);
       drawRole(canvas, view, role, plate, layout.right + 6, alpha);
-    }
-    for (int line = 0; line < solo.lines; line++) {
-      for (final (String head, Rect row, double alpha) in <(String, Rect, double)>[
-        ('x', solo.xLine(line), _span(beat, _xHeads) * fade.chrome),
-        ('y', solo.yLine(line), y),
-      ]) {
-        if (alpha > 0) {
-          view.kit.draw(
-            canvas,
-            head,
-            inked(view.kit.mono, solo.headSize, view.inks.quiet, alpha: alpha),
-            Offset(solo.headX, row.center.dy),
-            anchor: const Offset(0, 0.5),
-          );
-        }
-      }
     }
   }
 
@@ -457,8 +455,7 @@ final class ShiftScene extends LmScene {
   LmHit? _placeAt(Size size, LmView view, Offset at) {
     final SoloLayout solo = SoloLayout(size, view);
     for (int k = 0; k < view.focus.inputs; k++) {
-      final Rect column = Rect.fromLTRB(solo.x(k).left, solo.x(k).top, solo.x(k).right, solo.y(k).bottom);
-      if (column.inflate(solo.gap / 2).contains(at)) {
+      if (solo.x(k).inflate(solo.gap / 2).contains(at) || solo.y(k).inflate(solo.gap / 2).contains(at)) {
         return FocusPosition(k);
       }
     }
@@ -715,11 +712,12 @@ final class ShiftLayout {
       Rect.fromLTRB(cardLeft, rowTop(peptide) - 3, right + 6, rowTop(peptide) + block + 2);
 }
 
-/// The peptide followed, alone, as Shift brings it forward: top to bottom,
-/// the input x and target y tags, then its card, its name and its places,
-/// folded onto as many lines as make its tiles largest, each line of x with
-/// its line of y right under it, a place of y under the same place of x.
-/// Each line is headed x or y at its left. The tiles are as large as the
+/// The peptide followed, alone, as Shift brings it forward, x and y as two
+/// groups, as the batch once drew them (the user's ask of 2026-11-16: y made
+/// as it was for the whole batch): top to bottom, the input x tag, the card
+/// with the peptide's name and its places of x, folded onto as many lines as
+/// make its tiles largest; then the target y tag and y's lines, a place of y
+/// in the same column as the same place of x. The tiles are as large as the
 /// width and the height both allow, to [_largest]; the whole is centred.
 final class SoloLayout {
   SoloLayout(Size size, LmView view) : right = size.width - 16 {
@@ -728,17 +726,22 @@ final class SoloLayout {
     places = residues + 2;
     xCount = placesOfX(trace, view.peptide);
     tag = tagSize(view, 'input x').height;
-    final double room =
-        size.height - 2 * _edge - 2 * tag - _tagsGap - _tagGap - ShiftLayout.label - 2 * _cardPad;
-    final double across = right - left - _headRoom;
+    final double room = size.height -
+        2 * _edge -
+        2 * tag -
+        2 * _tagGap -
+        ShiftLayout.label -
+        2 * _cardPad -
+        _groupGap;
+    final double across = right - left;
     // The fold that makes the tiles largest: as many columns as the width
-    // and the lines' height both allow; of two the same, the fewer lines.
+    // and the two groups' height both allow; of two the same, the fewer lines.
     double best = 0;
     int bestColumns = places;
     for (int c = 1; c <= places; c++) {
       final int n = (places + c - 1) ~/ c;
       final double wide = across / c * (1 - _gapShare);
-      final double tall = (room - n * _pairGap - (n - 1) * _lineGap) / (2 * n);
+      final double tall = (room - 2 * (n - 1) * _lineGap) / (2 * n);
       final double tile = math.min(_largest, math.min(wide, tall));
       if (tile >= best) {
         best = tile;
@@ -751,19 +754,20 @@ final class SoloLayout {
     step = side / (1 - _gapShare);
     gap = step - side;
     final double block = (columns - 1) * step + side;
-    columnsLeft = left + _headRoom + (across - block) / 2;
-    headX = columnsLeft - _headRoom;
+    columnsLeft = left + (across - block) / 2;
     columnsRight = columnsLeft + block;
-    final double drawn = lines * (2 * side + _pairGap) + (lines - 1) * _lineGap;
-    final double content = 2 * tag + _tagsGap + _tagGap + ShiftLayout.label + 2 * _cardPad + drawn;
+    final double drawn = lines * side + (lines - 1) * _lineGap;
+    final double content =
+        2 * tag + 2 * _tagGap + ShiftLayout.label + 2 * _cardPad + _groupGap + 2 * drawn;
     final double top = math.max(_edge, (size.height - content) / 2);
-    xTag = Offset(headX - _cardSide, top);
-    yTag = Offset(headX - _cardSide, top + tag + _tagsGap);
-    final double cardTop = top + 2 * tag + _tagsGap + _tagGap;
-    name = Offset(headX, cardTop + _cardPad);
+    final double tagLeft = columnsLeft - _cardSide;
+    xTag = Offset(tagLeft, top);
+    final double cardTop = top + tag + _tagGap;
+    name = Offset(columnsLeft, cardTop + _cardPad);
     firstLine = name.dy + ShiftLayout.label;
-    card = Rect.fromLTRB(headX - _cardSide, cardTop, columnsRight + _cardSide, firstLine + drawn + _cardPad);
-    headSize = (side * 0.4).clamp(8.0, 11.0);
+    card = Rect.fromLTRB(tagLeft, cardTop, columnsRight + _cardSide, firstLine + drawn + _cardPad);
+    yTag = Offset(tagLeft, card.bottom + _groupGap);
+    yFirstLine = yTag.dy + tag + _tagGap;
     lightPad = math.min(3, gap / 2 + 1);
   }
 
@@ -773,22 +777,16 @@ final class SoloLayout {
   static int placesOfX(TrainingTrace trace, int peptide) =>
       math.min(trace.peptides[peptide].sequence.length + 2, trace.width);
 
-  /// From the canvas's edge, between the two tags, from the tags to the
-  /// card, and inside the card above and under its contents and at its
-  /// sides.
+  /// From the canvas's edge, from a tag to its group, inside the card above
+  /// and under its contents and at its sides, and from x's card to y's tag.
   static const double _edge = 6;
-  static const double _tagsGap = 4;
-  static const double _tagGap = 12;
+  static const double _tagGap = 8;
   static const double _cardPad = 4;
   static const double _cardSide = 6;
+  static const double _groupGap = 20;
 
-  /// Between a line of x and its line of y, and between one pair of lines
-  /// and the next: enough to read them as pairs.
-  static const double _pairGap = 3;
-  static const double _lineGap = 14;
-
-  /// The room for a line's head, x or y.
-  static const double _headRoom = 14;
+  /// Between one line of a group and the next.
+  static const double _lineGap = 6;
 
   /// The share of a column between two tiles, and the largest a tile is
   /// drawn.
@@ -815,33 +813,36 @@ final class SoloLayout {
   late final double columnsLeft;
   late final double columnsRight;
 
-  /// Where the lines' heads start, and how large they are written.
-  late final double headX;
-  late final double headSize;
-
   late final double tag;
   late final Offset xTag;
   late final Offset yTag;
 
-  /// The card round the name and the lines, the name's top left, and the
-  /// first line's top.
+  /// The card round the name and x's lines, the name's top left, and the
+  /// first line's top, of x and of y.
   late final Rect card;
   late final Offset name;
   late final double firstLine;
+  late final double yFirstLine;
 
   /// How far the pair's light reaches past its tiles.
   late final double lightPad;
 
-  double _lineTop(int line) => firstLine + line * (2 * side + _pairGap + _lineGap);
+  /// Where y's lines lie under x's.
+  double get drop => yFirstLine - firstLine;
+
+  double _lineTop(int line) => firstLine + line * (side + _lineGap);
 
   /// Place [k] in x.
   Rect x(int k) => Rect.fromLTWH(columnsLeft + (k % columns) * step, _lineTop(k ~/ columns), side, side);
 
-  /// Place [i] in y, right under the same place in x.
-  Rect y(int i) => x(i).shift(Offset(0, side + _pairGap));
+  /// Place [i] in y, in the same column as the same place in x.
+  Rect y(int i) => x(i).shift(Offset(0, drop));
 
   /// Line [line] of x, and of y, from the first column to the last.
   Rect xLine(int line) => Rect.fromLTWH(columnsLeft, _lineTop(line), columnsRight - columnsLeft, side);
 
-  Rect yLine(int line) => xLine(line).shift(Offset(0, side + _pairGap));
+  Rect yLine(int line) => xLine(line).shift(Offset(0, drop));
+
+  /// The bottom of y's last line.
+  double get bottom => yLine(lines - 1).bottom;
 }

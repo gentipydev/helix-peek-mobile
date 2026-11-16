@@ -994,27 +994,27 @@ void main() {
         isTrue,
         reason: '$size: gap $gap, tile ${layout.tileHeight}',
       );
-      // Then the peptide followed, alone: every place on the canvas and in
-      // its card, each line of y right under its line of x and clear of the
-      // next line of x, and every tile larger than the batch's.
+      // Then the peptide followed, alone, x and y as two groups, as the
+      // batch drew them: every place on the canvas, x's in its card, y's
+      // under y's tag below it, a place of y in its place of x's column,
+      // and every tile larger than the batch's.
       for (int p = 0; p < trace.peptides.length; p++) {
         final SoloLayout solo = SoloLayout(size, view(inks, kit, peptide: p));
         final String why = '$size, peptide $p';
         expect(solo.side, greaterThan(layout.tileHeight), reason: why);
+        expect(solo.yTag.dy, greaterThan(solo.card.bottom), reason: why);
+        expect(solo.card.top, greaterThan(solo.xTag.dy + solo.tag), reason: why);
         for (int k = 0; k < solo.places; k++) {
           for (final Rect tile in <Rect>[solo.x(k), solo.y(k)]) {
             expect((Offset.zero & size).inflate(1e-9).contains(tile.topLeft), isTrue, reason: '$why, $k');
             expect(tile.right, lessThanOrEqualTo(size.width + 1e-9), reason: '$why, $k');
-            expect(tile.bottom, lessThanOrEqualTo(solo.card.bottom + 1e-9), reason: '$why, $k');
+            expect(tile.bottom, lessThanOrEqualTo(size.height + 1e-9), reason: '$why, $k');
             expect(tile.left, greaterThanOrEqualTo(solo.card.left - 1e-9), reason: '$why, $k');
           }
-          expect(solo.y(k).top, greaterThan(solo.x(k).bottom), reason: '$why, $k');
+          expect(solo.x(k).bottom, lessThanOrEqualTo(solo.card.bottom + 1e-9), reason: '$why, $k');
+          expect(solo.y(k).top, greaterThan(solo.yTag.dy + solo.tag), reason: '$why, $k');
           expect(solo.y(k).left, solo.x(k).left, reason: '$why, $k');
         }
-        for (int line = 0; line + 1 < solo.lines; line++) {
-          expect(solo.yLine(line).bottom, lessThan(solo.xLine(line + 1).top), reason: '$why, line $line');
-        }
-        expect(solo.card.top, greaterThan(solo.yTag.dy + solo.tag), reason: why);
       }
     }
     // The accent: on the followed peptide's ids, and on no other peptide's,
@@ -1093,9 +1093,9 @@ void main() {
       final SoloLayout solo = SoloLayout(size, scene);
       expect(accented(last, solo.x(1)), greaterThan(0), reason: 'peptide $p');
       expect(accented(last, solo.y(0)), greaterThan(0), reason: 'peptide $p');
-      // Under the card, the other peptides gone.
+      // Under y's group, the other peptides gone.
       expect(
-        strongest(last, Rect.fromLTRB(0, solo.card.bottom + 1, size.width, size.height)),
+        strongest(last, Rect.fromLTRB(0, solo.bottom + 1, size.width, size.height)),
         0,
         reason: 'peptide $p',
       );
@@ -1107,11 +1107,8 @@ void main() {
         final int i = scene.focus.inputs;
         expect(trace.token(frame[i + 1]), '<pad>');
         final Rect place = solo.y(i);
-        // On the card, as the slot lies.
-        void card(Canvas canvas) => canvas.drawRRect(
-          RRect.fromRectAndRadius(solo.card, const Radius.circular(6)),
-          Paint()..color = inks.followed,
-        );
+        // On the ground, as y's group lies, under x's card.
+        void card(Canvas canvas) {}
         final ByteData bare = await render(card);
         final ByteData was = await render((Canvas canvas) {
           card(canvas);
