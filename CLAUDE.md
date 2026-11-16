@@ -745,7 +745,10 @@ larger, `idGrowth`): the user's ask of 2026-11-15, numbers slightly bigger
 and bolder (6.5 → 7 pt in a Pro Max's tables). No outline is drawn over
 another (the user's check of the same day): where two would meet they share
 an edge, as two places of one token next to each other do in Embedding, or
-one gives way (`lm_outlines_test`). `docs/design/peptide-lm.md` has the
+one gives way (`lm_outlines_test`). The tiles that name a table's rows, slid over
+the gutter Embedding writes its ids in, stand `StreamTable.tileInset` (8)
+short of the table's edge, as Loop's map's do, so the outline of the row in
+focus runs 8 pt in, not 1 (the user's ask of 2026-11-16). `docs/design/peptide-lm.md` has the
 design.
 
 ## Zoom (`lib/features/zoom/`)

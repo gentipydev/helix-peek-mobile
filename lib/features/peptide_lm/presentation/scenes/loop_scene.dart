@@ -999,9 +999,9 @@ final class LoopLayout {
       top: mapTop,
       pitch: pitch,
       chipSide: chip,
-      labelLeft: left,
+      labelLeft: left + StreamTable.tileInset,
       dx: 0,
-      mapLeft: left + chip + _chipGap,
+      mapLeft: left + StreamTable.tileInset + chip + _chipGap,
       right: right,
     );
     ceiling = math.max(trace.loss(1), trace.uniform) * 1.06;

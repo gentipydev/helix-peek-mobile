@@ -1380,3 +1380,22 @@ large stands out.
 
 Sampling new peptides (the backend's step 6, not written); the corpus run
 on 10,416 peptides; a run trained on demand or with other settings.
+
+## The tiles off the edge (2026-11-16)
+
+The user's screenshots of Attention, Loss and Update: the column of tiles
+naming the rows, slid over Embedding's id gutter, stood 5 pt from the
+screen's side and the outline of the row in focus 1 pt, on a phone's
+rounded edge. Measured on every frame of each stage (the nearest drawn
+pixel to the canvas's left, every 20 s), the stages that slide the tiles,
+Scores, Attention, Predict, Loss, Backward's table, Update's tables and
+Loop's map, all touched it; Feed-forward (7 pt) and Forward (10.5) did not.
+`StreamTable.gutter` now stops `StreamTable.tileInset` (8 pt) short, and
+Loop's map, which lays its own tiles, takes the same inset: the tiles stand
+12 pt in, the outline 8. The rows' numbers keep their width (the slide takes
+the room out of the gutter between tile and row, not out of the row), so
+nothing is written smaller; every stage still opens on the last frame of
+the one before, pixel for pixel. Left as they were, at 3 to 5 pt: Loop's
+plot names (`nats`, `rate`) and the benches' number columns at the left in
+Predict, Backward and Update.
+

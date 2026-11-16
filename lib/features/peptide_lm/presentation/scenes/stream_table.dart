@@ -187,8 +187,14 @@ final class StreamTable {
 
   /// How far left the tiles and the rows can go: over the gutter Embedding
   /// writes its ids in, which the stream's stages leave empty, so the tiles
-  /// come to the canvas's side, under the tag.
-  double get gutter => layout.label(0).left - layout.left;
+  /// come near the canvas's side, [tileInset] short of it.
+  double get gutter => math.max(0, layout.label(0).left - layout.left - tileInset);
+
+  /// How far the tiles, slid over the gutter, stand in from the table's
+  /// left edge: room for the outline of the row in focus, clear of the
+  /// screen's rounded edge (the user's ask of 2026-11-16: the tiles and
+  /// that outline stood 5 and 1 pt from the side).
+  static const double tileInset = 8;
 
   /// The tiles that name the places, at the rows' left, [dx] along.
   void drawTiles(Canvas canvas, {double alpha = 1, double dx = 0}) {
