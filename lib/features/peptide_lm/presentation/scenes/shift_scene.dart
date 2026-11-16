@@ -791,7 +791,7 @@ final class SoloLayout {
   /// The share of a column between two tiles, and the largest a tile is
   /// drawn.
   static const double _gapShare = 0.1;
-  static const double _largest = 40;
+  static const double _largest = 32;
 
   final double left = 20;
   final double right;

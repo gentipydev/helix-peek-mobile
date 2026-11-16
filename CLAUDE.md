@@ -252,7 +252,7 @@ opens on Tokenise's last frame, pixel for pixel (`TokeniseScene.paintEnd`,
 (`shift_scene.dart`, 10 beats): the batch opened out into its peptides,
 input x, what the model reads (`ShiftLayout`); then the other peptides and
 the padding go, slowly, and the followed one comes forward alone, its tiles
-grown as large as the canvas allows (to 40 pt), each id with its residue's
+grown as large as the canvas allows (to 32 pt; 40 read as huge, the user's word of 2026-11-16), each id with its residue's
 letter in the corner, folded onto lines (`SoloLayout`; the user's picks of
 2026-11-16: the batch's x and y, 500 pt apart, hid the one-place shift);
 then y is made as it once was for the whole batch (the user's ask the
