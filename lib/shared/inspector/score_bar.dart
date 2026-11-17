@@ -21,6 +21,7 @@ class ScoreBar extends StatelessWidget {
     required this.semanticsLabel,
     this.valueKey,
     this.tag,
+    this.trackOpacity = 0.1,
     super.key,
   });
 
@@ -47,6 +48,11 @@ class ScoreBar extends StatelessWidget {
   /// acid. One column, one question — what is special about this row — so a
   /// row never grows a second line to say it. The native row keeps its "WT".
   final Widget? tag;
+
+  /// How strongly the bar's track, the room it could fill, takes [color]. A
+  /// row the reader picked is drawn stronger, so it reads even where its
+  /// score is at the scale's floor and its bar is empty.
+  final double trackOpacity;
 
   /// The columns either side of the bar, which [ScoreScale] keeps clear so
   /// its ends stand over the bar's: the letter before it, and the tag and the
@@ -92,7 +98,7 @@ class ScoreBar extends StatelessWidget {
           Container(
             height: 7,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withValues(alpha: trackOpacity),
               borderRadius: BorderRadius.circular(3),
             ),
           ),
