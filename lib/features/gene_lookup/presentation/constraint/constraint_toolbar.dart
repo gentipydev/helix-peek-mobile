@@ -111,12 +111,6 @@ class ChemistryKey extends StatelessWidget {
         (AminoAcidProperty.cysteine, 'C', 'cysteine'),
       ];
 
-  /// The twenty one-letter codes in the key's order, chemistry by chemistry:
-  /// `AILMVFWYHKRDENQSTGPC`.
-  static String get codes => _groups
-      .map(((AminoAcidProperty, String, String) group) => group.$2)
-      .join();
-
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);

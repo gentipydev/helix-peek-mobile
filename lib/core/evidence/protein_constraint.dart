@@ -162,34 +162,6 @@ final class ResidueConstraint {
 
   int get domainPosition => region.positionOf(number);
 
-  /// Where ESM-2 places a change to [aminoAcid] among this residue's
-  /// substitutions, 1 being the change it scores highest; out of
-  /// `ranked.length - 1`, every amino acid but the wild type. Changes that
-  /// score the same share a place, so a tie is never worse for the one asked
-  /// about. Null for the wild type itself, which is no change, and for a code
-  /// the track does not score.
-  int? placeOf(String aminoAcid) {
-    if (aminoAcid == wildtype) {
-      return null;
-    }
-    double? score;
-    for (final SubstitutionScore s in ranked) {
-      if (s.aminoAcid == aminoAcid) {
-        score = s.score;
-      }
-    }
-    if (score == null) {
-      return null;
-    }
-    int above = 0;
-    for (final SubstitutionScore s in ranked) {
-      if (s.aminoAcid != wildtype && s.score > score) {
-        above++;
-      }
-    }
-    return above + 1;
-  }
-
   /// A residue cited with its precursor number first — see [title].
   static String cite(String code, int number, ConstraintRegion region) {
     final String? second = region.citationOf(number);

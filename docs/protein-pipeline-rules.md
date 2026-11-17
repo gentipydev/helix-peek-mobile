@@ -611,13 +611,7 @@ dot and a ring that part by shape as well, named in the card's legend, on a
 page that carries no ClinVar mark. (The AVI contributions page, which
 coloured its four attribution groups in the same earth, was the first
 exception, from 2026-10-21 until it was removed at the user's word on
-2026-11-15, to keep the app simple: its data was heavy for what it showed.) A
-second, at the user's ask (2026-11-17): in guess mode a residue sheet draws the
-reader's own pick's bar, and its track more strongly, in the accent, the colour
-the mask that asked was outlined in. It marks what the reader did, not what a
-model or ClinVar reads, on that bar alone and never on text; the row's ClinVar dot, where it has one,
-keeps its class colour beside it ([residue sheet](residue-sheet-ux.md), "Guess
-first"). For
+2026-11-15, to keep the app simple: its data was heavy for what it showed.) For
 colour only, a record is grouped by its terms, which ClinVar separates with `/`
 and puts after a `;` where they are off the Mendelian axis (CFTR's
 `Pathogenic; drug response`): any pathogenic

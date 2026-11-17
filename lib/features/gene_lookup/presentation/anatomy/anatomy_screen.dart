@@ -383,8 +383,6 @@ class _AnatomyScreenState extends State<AnatomyScreen>
       return switch (stage?.kind) {
         StageKind.gene when _stage == 0 => 'Tap a region for its DNA',
         StageKind.protein when _constraintFailed => 'ESM-2 scores unavailable',
-        StageKind.protein when _supportsConstraint(stage) && _guessing =>
-          'Tap a residue to guess',
         StageKind.protein when _supportsConstraint(stage) =>
           'Tap a residue for its ESM-2 scores',
         StageKind.mrna when _supportsImpact(stage) =>
@@ -410,17 +408,6 @@ class _AnatomyScreenState extends State<AnatomyScreen>
   ProteinConstraint? _constraint;
   bool _constraintFailed = false;
   bool _conservation = false;
-
-  /// Whether a residue asks for the reader's guess at ESM-2's top change
-  /// before its sheet shows the ranking: the protein page's "Guess", for this
-  /// walk, as [_conservation] is. Never in a landing, which offers no Guess.
-  bool _guessing = false;
-
-  /// The reader's guesses in this walk, by residue index: the amino acid
-  /// picked, or null where they asked for the scores without one. A residue
-  /// here has been answered, and shows its ranking, the pick marked, without
-  /// asking again.
-  final Map<int, String?> _guesses = <int, String?>{};
   GeneImpact? _impact;
   GeneClinVar? _clinvar;
   bool _clinvarFailed = false;
@@ -1177,13 +1164,6 @@ class _AnatomyScreenState extends State<AnatomyScreen>
           slide: _sheetSlide,
           pinIdentity: pin,
           onDismiss: () => unawaited(_dismissPanel()),
-          // Asked once a walk: an answered residue shows its ranking, its
-          // pick marked, even after Guess is turned off.
-          pick: _guesses[index],
-          onGuess: _guessing && !_guesses.containsKey(index)
-              ? (String? aminoAcid) =>
-                    setState(() => _guesses[index] = aminoAcid)
-              : null,
         );
       }
       if (_supportsImpact(stage)) {
@@ -1545,8 +1525,6 @@ class _AnatomyScreenState extends State<AnatomyScreen>
       _stage = 0;
       _tracer = null;
       _clearMask();
-      // Its residues are another protein's: nothing guessed here holds there.
-      _guesses.clear();
     }
   }
 
@@ -1621,21 +1599,6 @@ class _AnatomyScreenState extends State<AnatomyScreen>
       _tracer == null &&
       _maskedIndex == null &&
       widget.target.state(TrackKind.locus) == TrackState.ready;
-
-  /// Whether the strip offers "Guess": on a scored protein page at rest, as
-  /// the gene page offers the zoom, and never in a landing, which a record
-  /// opened for its data.
-  bool get _offersGuess {
-    final AnatomyStage? stage = _stage < _model.stages.length
-        ? _model.stages[_stage]
-        : null;
-    return widget.landing == null &&
-        _supportsConstraint(stage) &&
-        _tracer == null &&
-        _maskedIndex == null;
-  }
-
-  void _toggleGuess() => setState(() => _guessing = !_guessing);
 
   /// Opens the zoom over the walk, from a body down to this gene. Its
   /// "Walk ›" comes back to this page, as it was left.
@@ -2333,8 +2296,6 @@ class _AnatomyScreenState extends State<AnatomyScreen>
                 ? _openSelection
                 : null,
             onZoom: _offersZoom ? _openZoom : null,
-            onGuess: _offersGuess ? _toggleGuess : null,
-            guessing: _guessing,
             textScale: MediaQuery.textScalerOf(context)
                 .scale(1)
                 .clamp(1.0, 1.2),
@@ -2831,8 +2792,6 @@ class _Header extends StatelessWidget implements PreferredSizeWidget {
     this.hint,
     this.onOpenDna,
     this.onZoom,
-    this.onGuess,
-    this.guessing = false,
     this.onWholeGene,
     this.onReturn,
     this.returnTo,
@@ -2853,11 +2812,6 @@ class _Header extends StatelessWidget implements PreferredSizeWidget {
   final String? hint;
   final VoidCallback? onOpenDna;
   final VoidCallback? onZoom;
-
-  /// Turns guessing on and off, where the page offers it; see
-  /// [_ContextStrip.onGuess].
-  final VoidCallback? onGuess;
-  final bool guessing;
   final VoidCallback? onWholeGene;
 
   /// Back to what is under a landing: the ClinVar overview, or the sheet
@@ -2999,8 +2953,6 @@ class _Header extends StatelessWidget implements PreferredSizeWidget {
           showNote: onWholeGene == null || liftedBase,
           onOpenDna: onOpenDna,
           onZoom: onZoom,
-          onGuess: onGuess,
-          guessing: guessing,
           textScale: textScale,
         ),
       ),
@@ -3067,8 +3019,6 @@ class _ContextStrip extends StatelessWidget implements PreferredSizeWidget {
     this.showNote = true,
     this.onOpenDna,
     this.onZoom,
-    this.onGuess,
-    this.guessing = false,
     this.textScale = 1,
   });
 
@@ -3088,14 +3038,6 @@ class _ContextStrip extends StatelessWidget implements PreferredSizeWidget {
   /// page is not at rest or the protein has no locus. Never offered beside
   /// [onOpenDna]: a picked region takes the strip's one place.
   final VoidCallback? onZoom;
-
-  /// Turns guessing on or off: on a scored protein page with nothing masked,
-  /// the page's one offer, as [onZoom] is the gene page's. Null elsewhere;
-  /// the two are on different pages, so they never meet.
-  final VoidCallback? onGuess;
-
-  /// Whether guessing is on, which the pill wears.
-  final bool guessing;
   final double textScale;
 
   /// Three lines at their worst, plus the air that makes them three lines
@@ -3142,18 +3084,10 @@ class _ContextStrip extends StatelessWidget implements PreferredSizeWidget {
     final String? below = hint ?? (showNote ? tracer?.note : null);
     final Color accent = theme.colorScheme.primary;
     // The one thing the strip offers to be pressed, where it offers one.
-    final (VoidCallback, String)? action = switch ((
-      onOpenDna,
-      onZoom,
-      onGuess,
-    )) {
-      (final VoidCallback open, _, _) => (open, _StripAction.openDna),
-      (null, final VoidCallback zoom, _) => (zoom, _StripAction.openZoom),
-      (null, null, final VoidCallback guess) => (
-        guess,
-        guessing ? _StripAction.stopGuessing : _StripAction.startGuessing,
-      ),
-      (null, null, null) => null,
+    final (VoidCallback, String)? action = switch ((onOpenDna, onZoom)) {
+      (final VoidCallback open, _) => (open, _StripAction.openDna),
+      (null, final VoidCallback zoom) => (zoom, _StripAction.openZoom),
+      (null, null) => null,
     };
 
     return Semantics(
@@ -3188,11 +3122,7 @@ class _ContextStrip extends StatelessWidget implements PreferredSizeWidget {
                 width: _openDnaReach,
                 child: GestureDetector(
                   key: ValueKey<String>(
-                    onOpenDna != null
-                        ? 'open-dna-reach'
-                        : onZoom != null
-                        ? 'open-zoom-reach'
-                        : 'guess-reach',
+                    onOpenDna != null ? 'open-dna-reach' : 'open-zoom-reach',
                   ),
                   behavior: HitTestBehavior.opaque,
                   excludeFromSemantics: true,
@@ -3261,53 +3191,7 @@ class _ContextStrip extends StatelessWidget implements PreferredSizeWidget {
                     // own sentence is already the general statement, and a
                     // second one under it would be two voices saying the same
                     // thing.
-                    if (onGuess case final VoidCallback guess) ...<Widget>[
-                      const SizedBox(height: _gap),
-                      // "Guess" stands at the end of the line that says what a
-                      // tap on a residue does, which it changes, rather than
-                      // beside the page's sentence: there it took the width a
-                      // long protein name needs for its two lines (TYRP1's at
-                      // 360 points, five at 320). Compact, so the line keeps
-                      // its own height; the reach above takes the thumb.
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: IgnorePointer(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                // Smaller rather than cut, where type turned
-                                // up on the narrowest phone leaves it no room.
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    below ?? '',
-                                    style: AppTypography.anatomyNote(
-                                      theme.colorScheme.onSurfaceVariant,
-                                    ).copyWith(
-                                      fontSize: _noteSize,
-                                      height: _noteHeight,
-                                    ),
-                                    maxLines: 1,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          _StripAction(
-                            key: const ValueKey<String>('guess'),
-                            label: 'Guess',
-                            spoken: guessing
-                                ? _StripAction.stopGuessing
-                                : _StripAction.startGuessing,
-                            accent: accent,
-                            onTap: guess,
-                            selected: guessing,
-                            compact: true,
-                          ),
-                        ],
-                      ),
-                    ] else if (below != null) ...<Widget>[
+                    if (below != null) ...<Widget>[
                       const SizedBox(height: _gap),
                       IgnorePointer(
                         child: Text(
@@ -3346,9 +3230,7 @@ class _ContextStrip extends StatelessWidget implements PreferredSizeWidget {
 
 /// The one action the strip carries: open the selected region as DNA on the
 /// gene page, play the transcript's translation on its own page, or, on the
-/// gene page with nothing picked, zoom from a body down to the gene; or, on a
-/// scored protein page with nothing masked, turn guessing on and off, which
-/// the pill wears while it is on ([selected]).
+/// gene page with nothing picked, zoom from a body down to the gene.
 ///
 /// A pill rather than bare type. The strip is prose and a filled control would
 /// outweigh a sentence — but this is the only thing on the page waiting to be
@@ -3366,8 +3248,6 @@ class _StripAction extends StatefulWidget {
     required this.spoken,
     required this.accent,
     required this.onTap,
-    this.selected = false,
-    this.compact = false,
     super.key,
   });
 
@@ -3378,35 +3258,16 @@ class _StripAction extends StatefulWidget {
   final Color accent;
   final VoidCallback onTap;
 
-  /// Whether what the pill turns on is on: a stronger tint and a check
-  /// before the label, with the label itself unchanged, so the pill keeps its
-  /// place and its width does not jump to a second word.
-  final bool selected;
-
-  /// Set at the size of the line it ends rather than over it: a strip's
-  /// second line, whose height is all the room it has. Its reach is the
-  /// strip's, so the tap target stays as large as the others'.
-  final bool compact;
-
   /// The label, and the air either side of it inside the pill.
   static const double _size = 15;
   static const double _padX = 7;
   static const double _padY = 3;
 
-  /// The same, for a [compact] pill: no taller than the note line it ends.
-  static const double _compactSize = 12;
-  static const double _compactPadX = 6;
-  static const double _compactPadY = 1;
-
-  /// The pill's tint, and its tint while what it turns on is on.
+  /// The pill's tint.
   static const double _tint = 0.12;
-  static const double _selectedTint = 0.3;
 
   static const String openDna = 'Open the selected region as DNA';
   static const String openZoom = 'Zoom from a body down to this gene';
-  static const String startGuessing =
-      'Guess ESM-2’s top change before its scores';
-  static const String stopGuessing = 'Stop guessing';
 
   @override
   State<_StripAction> createState() => _StripActionState();
@@ -3446,17 +3307,6 @@ class _StripActionState extends State<_StripAction>
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final double size = widget.compact
-        ? _StripAction._compactSize
-        : _StripAction._size;
-    final Widget label = Text(
-      widget.label,
-      style: theme.textTheme.labelLarge?.copyWith(
-        fontSize: size,
-        height: 1,
-        color: widget.accent,
-      ),
-    );
     return Semantics(
       button: true,
       label: widget.spoken,
@@ -3465,10 +3315,7 @@ class _StripActionState extends State<_StripAction>
         behavior: HitTestBehavior.opaque,
         onTap: widget.onTap,
         child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: 44,
-            minHeight: widget.compact ? 0 : 24,
-          ),
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 24),
           child: Padding(
             padding: const EdgeInsets.only(left: AppSpacing.sm),
             child: Align(
@@ -3482,39 +3329,22 @@ class _StripActionState extends State<_StripAction>
                 ),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: widget.accent.withValues(
-                      alpha: widget.selected
-                          ? _StripAction._selectedTint
-                          : _StripAction._tint,
-                    ),
+                    color: widget.accent.withValues(alpha: _StripAction._tint),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Padding(
-                    padding: widget.compact
-                        ? const EdgeInsets.symmetric(
-                            horizontal: _StripAction._compactPadX,
-                            vertical: _StripAction._compactPadY,
-                          )
-                        : const EdgeInsets.symmetric(
-                            horizontal: _StripAction._padX,
-                            vertical: _StripAction._padY,
-                          ),
-                    child: widget.selected
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              // An icon rather than a typed ✓, which the
-                              // strip's face does not carry.
-                              Icon(
-                                Icons.check_rounded,
-                                size: size,
-                                color: widget.accent,
-                              ),
-                              const SizedBox(width: 3),
-                              label,
-                            ],
-                          )
-                        : label,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: _StripAction._padX,
+                      vertical: _StripAction._padY,
+                    ),
+                    child: Text(
+                      widget.label,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontSize: _StripAction._size,
+                        height: 1,
+                        color: widget.accent,
+                      ),
+                    ),
                   ),
                 ),
               ),

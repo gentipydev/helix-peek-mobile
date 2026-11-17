@@ -73,11 +73,6 @@ for is always shown, marked with its class, however low it ranks. Every bar uses
 their signed numerical scores. Badges use inverse min-max entropy: high ≥0.8,
 moderate ≥0.4, otherwise tolerant. Reduced motion skips the mask delay and slide.
 
-"Guess" on the protein page's strip turns guessing on for the walk: a masked
-residue then asks which change ESM-2 ranks first, as twenty tiles, before its
-ranking comes in with the pick marked and placed ("Your pick: His · 8th of
-19"). Off, as every walk opens, the sheet is unchanged.
-
 The constraint asset is bundled and matched against the stage's own letters
 before any of it is drawn, so a track can only ever colour the protein it
 describes. There are no inference requests or model dependencies at runtime.

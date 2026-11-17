@@ -126,11 +126,6 @@ Git: commit the session's own changes locally. Never push, in any form.
   a protein whose `locus` track is ready, and never in a ClinVar landing:
   it opens the zoom over the walk (see "Zoom" below), which comes back to
   this page. A protein with no ready locus is drawn as it always was.
-  The scored protein page, with nothing masked, offers "Guess" on its strip
-  (the user's ask of 2026-11-17), never in a landing: while it is on, for
-  the walk, a residue asks which change ESM-2 ranks first before its sheet
-  shows the ranking, the pick then marked and placed
-  (`docs/residue-sheet-ux.md`, "Guess first"). Off, the sheet is unchanged.
 - `lib/features/home/` and `lib/features/search/`: the home screen and the
   search: two tabs, swiped between or chosen by name, each a page with its
   own field and query (the user's design of 2026-11-13). Curated, which it

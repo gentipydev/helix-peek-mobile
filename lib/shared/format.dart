@@ -52,21 +52,6 @@ String spelledLeading(int value) {
   return word[0].toUpperCase() + word.substring(1);
 }
 
-/// A place as a reader says it: `1st`, `2nd`, `3rd`, `4th`, `11th`, `22nd`.
-String ordinal(int value) {
-  final int last = value.abs() % 10;
-  final int lastTwo = value.abs() % 100;
-  final String suffix = lastTwo >= 11 && lastTwo <= 13
-      ? 'th'
-      : switch (last) {
-          1 => 'st',
-          2 => 'nd',
-          3 => 'rd',
-          _ => 'th',
-        };
-  return '${grouped(value)}$suffix';
-}
-
 /// A log-ratio as the residue panel prints it: `−11.0`, `+0.4`, `0.0`.
 String formatScore(double value) => value == 0
     ? '0.0'
