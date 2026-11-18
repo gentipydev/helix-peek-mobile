@@ -128,10 +128,15 @@ class AgreementPage extends StatelessWidget {
 const String _credit = 'AlphaGenome Atlas · ESM-2';
 
 /// What the two are and how the page sets them side by side, in one line.
+/// AVI is described as About these sources describes it: it reads the DNA
+/// change, but with conservation and AlphaMissense among what it integrates,
+/// so "from the DNA" alone would hide why it overlaps ESM-2.
 const String _compared =
-    'AVI (AlphaGenome Atlas) scores each change from the DNA, ESM-2 the '
-    'amino acid it makes from the protein sequence; both are ranked here '
-    'among the gene’s missense substitutions.';
+    'AVI (AlphaGenome Atlas) scores each DNA change genome-wide, from '
+    'splicing, expression, chromatin, conservation and coding predictions, '
+    'AlphaMissense among them; ESM-2 scores the amino acid it makes from the '
+    'protein sequence alone; both are ranked here among the gene’s missense '
+    'substitutions.';
 
 const TextStyle _mono = TextStyle(
   fontFamily: AppTypography.monoFamily,

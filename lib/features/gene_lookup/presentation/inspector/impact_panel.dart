@@ -342,8 +342,9 @@ class _Details extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   'AlphaGenome Variant Impact, precomputed: every substitution '
-                  'at this base scored against the GRCh38 reference, for '
-                  'splicing, expression, chromatin and coding effects together. '
+                  'at this base scored against the GRCh38 reference, from '
+                  'splicing, expression, chromatin, conservation and coding '
+                  'predictions, AlphaMissense among them. '
                   'Phred = −10 log10(1 − quantile), calibrated across the '
                   'genome: 10 is the top 10% of SNVs, 20 the top 1% and 30 the '
                   'top 0.1%.',

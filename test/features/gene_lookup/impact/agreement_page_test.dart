@@ -571,9 +571,11 @@ void main() {
     // user's ask, 2026-10-25).
     expect(_row(tester, 'agreement-source'), <String>[
       'AlphaGenome Atlas · ESM-2',
-      'AVI (AlphaGenome Atlas) scores each change from the DNA, ESM-2 the '
-          'amino acid it makes from the protein sequence; both are ranked '
-          'here among the gene’s missense substitutions.',
+      'AVI (AlphaGenome Atlas) scores each DNA change genome-wide, from '
+          'splicing, expression, chromatin, conservation and coding '
+          'predictions, AlphaMissense among them; ESM-2 scores the amino acid '
+          'it makes from the protein sequence alone; both are ranked here '
+          'among the gene’s missense substitutions.',
     ]);
     expect(find.textContaining('Output Terms'), findsNothing);
     // Text only: the page links nowhere.
