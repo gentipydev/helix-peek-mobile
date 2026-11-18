@@ -1,10 +1,11 @@
 **AVI and ESM-2, side by side**
 
-A coding base's sheet names its codon and residue in one line,
-`codon 90 · GGC · Gly90 · highly constrained ›`. Since 2026-10-22 that line
-opens a page of its own, rising over the walk as the ClinVar list does:
-the base's three substitutions as AVI and ESM-2 each read them, ranked in the
-gene. × closes it back onto the sheet.
+A coding base's sheet has a row "AVI and ESM-2 ›" under its bars (since
+2026-11-15; from 2026-10-22 the codon line itself, then
+`codon 90 · GGC · Gly90 · highly constrained ›`, was the link). It opens a
+page of its own, rising over the walk as the ClinVar list does: the base's
+three substitutions as AVI and ESM-2 each read them, ranked in the gene.
+× closes it back onto the sheet.
 
 Before, the line moved the walk to the protein page with the residue picked,
 and nothing brought the reader back to the base (the user's report,
@@ -62,13 +63,15 @@ Spearman ρ                                      0.79
 Same order within a base            64% of 540 pairs
 
 AlphaGenome Atlas · ESM-2
-AVI (AlphaGenome Atlas) scores each change from the DNA, ESM-2 the amino acid
-it makes from the protein sequence; both are ranked here among the gene’s
-missense substitutions.
+AVI (AlphaGenome Atlas) scores each DNA change genome-wide, from splicing,
+expression, chromatin, conservation and coding predictions, AlphaMissense
+among them; ESM-2 scores the amino acid it makes from the protein sequence
+alone; both are ranked here among the gene’s missense substitutions.
 ```
 
 **The header**
-- It is the Contributions page's (`BaseIdentity`).
+- It is `BaseIdentity`, first made for the Contributions page (removed
+  2026-11-15).
 - Under the region stands the sheet's own whole line, the constraint band
   included: this page is both models'.
 
@@ -133,7 +136,12 @@ missense substitutions.
 - The ρ is set in the mono face: the sans face has no Greek.
 - The page ends on its two sources, "AlphaGenome Atlas · ESM-2", and one line
   on what they are and how they are compared, text only (the user's ask,
-  2026-10-22). It carries no AlphaGenome terms notice: the user had it taken
+  2026-10-22). Since 2026-11-18 the line describes AVI as About these sources
+  does, conservation and AlphaMissense among what it integrates: "scores
+  each change from the DNA" hid why a base's three changes score alike and
+  why AVI overlaps ESM-2 (the user's pick from a review of the sheet, this
+  page and the ClinVar record; the sheet's ⓘ was brought into line too,
+  `avi_described_test.dart`). It carries no AlphaGenome terms notice: the user had it taken
   off the page on 2026-10-25, though the terms ask for a conspicuous one
   wherever AVI output shows.
 - Until 2026-10-23 an ⓘ sheet over the page held the two scores, how the
@@ -160,7 +168,7 @@ and over ρ.
     and 0.08% of their ESM-2 scores.
 - **Its direction.** ESM-2's axis is turned over, so that each model's larger
   effect lies up and to the right. The two agreeing then reads as a rise, as
-  their positive ρ and the tracks' "highest" at the right do. Read with
+  their positive ρ and the tracks' "stronger effect →" at the right do. Read with
   ESM-2's score falling down the page, the same agreement would read as a
   fall beside a positive ρ.
 - **The cloud.** It is set in the quiet ink, and the more dots it holds the

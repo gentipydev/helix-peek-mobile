@@ -656,8 +656,29 @@ absence is never called benign. All twenty genes carry a snapshot since
 record at its real position, saying two things: its height is the record's
 own AVI, its head its class. Along the protein the marks stand on a drawing of
 the precursor named by its pieces; records off the protein stand on a drawing
-of the gene, a second titled panel on the same AVI scale, whose ceiling is set
-by every record and never by a filter or a zoom. ESM constraint is not drawn
+of the gene, a second titled panel on the same AVI scale. The scale is the
+base sheet's, to 40, for every gene: a record past it stands on it, and the
+panel's ceiling then reads "40+"; no filter or zoom moves it (until
+2026-11-18 the gene's highest record set it, and dystrophin's 69.2 gave 43%
+of its plot to 1.5% of its records). At the whole view the precursor's
+pieces are named where a name fits; a piece cut out of the mature protein
+with no room keeps a notch; a series of numbered pieces is named as one
+wherever a piece of it has no room ("Spectrin repeat 1–24", else "SR1–24");
+a short form is set over a piece too narrow for it where it runs into no name
+or notch, else the piece keeps a notch; and an unnamed stretch of the chain
+keeps only its tick (dystrophin read as 53 notches and no name). A page with
+more than 800 records with an AVI score in either panel — 0.4 points each of
+a 320-point plot, where heads are drawn at their smallest and one plot began
+to give a class far more or less ink than its share of records (dystrophin's
+P/LP 25% of the ink for 13%, Conflicting 27% for 10%, B/LB 18% for 33%) —
+draws both panels in lanes, a lane for each class a panel holds, in the
+chips' order, on that one scale and one lane height: each lane named over it
+by its class after its dot, the axis numbered once, the dashed line in every
+lane; a lane's heads sized, stemmed and faded by its own crowding (√ of the
+points a mark, 0.12 to 1), so a pile darkens rather than covers and no hue
+mixes; a zoom, a filter or the landscape page never switches the layout (the
+user's choice, 2026-11-18; curated in lanes: dystrophin, CFTR, CASR, p53,
+thyroglobulin, and hemoglobin, whose gene panel holds 803). ESM constraint is not drawn
 here: ESM-2 meets ClinVar on the protein page in ESM-2 mode and on every
 residue sheet, and the band of it the marks once stood on was a third copy of
 that view (taken off at the user's ask, 2026-11-15, the page being "so
@@ -669,19 +690,19 @@ which the list remembers; folded is not a filter, and the list keeps every
 record off the protein. The class chips choose which classes are drawn —
 none chosen is all of them, and each tap adds or takes one away — and a class
 left out is removed, marks and stems, while every mark that stays keeps its
-position and height. Zooming a panel — its − and + keys, a pinch, or a tap on
+position and height; in lanes its lane stays, empty. Zooming a panel — its − and + keys, a pinch, or a tap on
 a region's name under it — changes its scale, never a position; while zoomed, a
 bar under the panel frames the window on the whole and is dragged to move
-along, and a zoomed intron drawn shortened is titled by its real length. Where
-marks are dense, stems are dropped and heads drawn smaller rather than spread
-out. A tapped mark is named on a card that rises over the foot of the screen
+along, and a zoomed intron drawn shortened is titled by its real length. Where marks are dense, stems are dropped and heads drawn smaller rather than
+spread out; in lanes, each lane by its own marks. A tapped mark is named on a card that rises over the foot of the screen
 only while the mark is held, over the page, which never moves (the list leaves
 room under its foot while the card is up); nothing stands there at rest (the
 user's ask, 2026-11-15: an idle "Tap a mark for its record" card took a band
 of the page for nothing). "Show in list ›" opens the record's row and lets the
 card go, and so do a second tap on the mark and a tap on the plot away from
-every mark; heads drawn over one another are stepped through first, the one on
-top first. A row opened in the list, and the records a sheet's "All ›" opens
+every mark; heads drawn over one another are stepped through first, the one on top
+first; in lanes a finger means the lane it is on, and a pile is its own
+lane's. A row opened in the list, and the records a sheet's "All ›" opens
 the list on, are ringed on the strip with no card.
 Each panel also opens on the whole screen from its
 title's full-screen key — the same panel and keys with the screen's room, the
