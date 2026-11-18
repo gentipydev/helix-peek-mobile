@@ -41,9 +41,19 @@ typedef StripWindow = (double, double);
 /// every record off the protein.
 ///
 /// Every mark keeps its real position and height whatever is shown: the
-/// classes left out are simply not drawn, and the scale is set by every record
-/// so leaving some out never moves the rest. A dense stretch overlaps rather
-/// than spreading out. Each panel zooms — its − and + keys, a pinch, or a tap
+/// classes left out are simply not drawn, and the scale is the base sheet's,
+/// to 40, so leaving some out never moves the rest. A dense stretch overlaps
+/// rather than spreading out.
+///
+/// Where a page holds more records than one plot can show truthfully — more
+/// than [lanesFrom] with an AVI score in either panel — each panel draws a
+/// lane for each class, in the chips' order, on the same AVI scale and the
+/// same height of lane in both panels. Marks of one class overlap only
+/// marks of their own colour, and fade as they crowd, so a pile darkens
+/// rather than covering; in one plot dystrophin's P/LP, painted last, took a
+/// quarter of the ink for an eighth of the records (the user's choice of
+/// 2026-11-18). A class the chips leave out keeps its lane, empty, so nothing
+/// moves. Each panel zooms — its − and + keys, a pinch, or a tap
 /// on a region's name under it — and a zoomed panel carries a bar with the
 /// whole on it and the window framed, which is dragged to move along. The same
 /// positions, at a larger scale; the list below is the precise path to each
@@ -69,6 +79,7 @@ class EvidenceStrip extends StatefulWidget {
     this.onClose,
     this.dnaOpen = true,
     this.onDnaOpen,
+    this.lanesFrom = laneThreshold,
     super.key,
   });
 
@@ -126,6 +137,26 @@ class EvidenceStrip extends StatefulWidget {
   /// Opens the DNA panel, or folds it, from its title.
   final ValueChanged<bool>? onDnaOpen;
 
+  /// How many records with an AVI score a panel holds at most before the
+  /// page draws its panels in lanes, a lane for each class: [laneThreshold],
+  /// or another number where a test needs lanes on a small gene.
+  final int lanesFrom;
+
+  /// 800 records: 0.4 points of a 320-point phone plot each, where heads are
+  /// already drawn at their smallest ([headRadius]) and where one plot began
+  /// to give a class far more or less of its ink than its share of the
+  /// records (thyroglobulin's B/LB 35% for 50%; dystrophin's Conflicting 27%
+  /// for 10%). Below it the classes' shares of ink stay within ten points of
+  /// their shares of records. One number, so a phone, its landscape page and
+  /// a test all draw a page alike.
+  static const int laneThreshold = 800;
+
+  /// How opaque a lane's heads are at [perMark] points of panel for each of
+  /// its marks: whole while marks have room, fainter as they crowd, so a pile
+  /// of one class darkens as it grows rather than becoming one slab.
+  static double headOpacity(double perMark) =>
+      math.sqrt(math.max(0, perMark)).clamp(0.12, 1.0).toDouble();
+
   /// The narrowest a panel zooms to: ten residues, twelve bases.
   static const double leastResidues = 10;
   static const double leastBases = 12;
@@ -170,12 +201,13 @@ class EvidenceStrip extends StatefulWidget {
   /// its label, its label's first word, or its short form. Where none fits:
   /// - a piece cut out of the mature protein keeps its notch, as every
   ///   cleavage site and initiator methionine always had;
-  /// - a run of numbered pieces with only unnamed stretches of the chain
-  ///   between them takes one name over the run where that fits it:
-  ///   dystrophin's `Spectrin repeat 1–24`, else `SR1–24`;
-  /// - a piece kept in the protein with a short form, or such a run, puts the
-  ///   short form centred over it, the largest first, where it runs into no
-  ///   name or notch already placed, and keeps its notch where it would;
+  /// - a series of numbered pieces with only unnamed stretches of the chain
+  ///   between them is named as one wherever a piece of it has no room for a
+  ///   name of its own: dystrophin's `Spectrin repeat 1–24`, else `SR1–24`,
+  ///   rather than a few repeats by name and the rest by a range;
+  /// - a piece kept in the protein with a short form, or such a series, puts
+  ///   the short form centred over it, the largest first, where it runs into
+  ///   no name or notch already placed, and keeps its notch where it would;
   /// - a piece kept in the protein with no short form is an unnamed stretch
   ///   of the chain between named ones, and keeps only its tick.
   ///
@@ -200,16 +232,67 @@ class EvidenceStrip extends StatefulWidget {
       taken.add((at, at + measure(text)));
     }
 
-    // The names that fit their own piece, as they always were.
-    for (int i = 0; i < regions.length; i++) {
+    String? own(int i) {
       final ConstraintRegion region = regions[i];
       final double span = to(i) - from(i);
-      final String? fits = <String>[
+      return <String>[
         region.label,
         region.label.split(' ').first,
         region.short,
       ].where((String s) => s.isNotEmpty && measure(s) + 4 <= span).firstOrNull;
-      if (fits != null) {
+    }
+
+    // The series of numbered pieces: one stem, numbers running on, and only
+    // unnamed stretches of the chain between them. One a piece of which has
+    // no room for a name of its own is named as one, stretches and all.
+    final RegExp numbered = RegExp(r'^(.*\S)\s+(\d+)$');
+    final RegExp shortNumbered = RegExp(r'^(.*?)(\d+)$');
+    bool stretch(int i) =>
+        regions[i].kept &&
+        regions[i].short.isEmpty &&
+        !numbered.hasMatch(regions[i].label);
+    final List<(List<int>, String, int)> series = <(List<int>, String, int)>[];
+    for (int i = 0; i < regions.length; i++) {
+      final RegExpMatch? head = numbered.firstMatch(regions[i].label);
+      if (head == null || !regions[i].kept) {
+        continue;
+      }
+      final List<int> run = <int>[i];
+      int next = int.parse(head.group(2)!) + 1;
+      int j = i + 1;
+      while (true) {
+        int k = j;
+        while (k < regions.length && stretch(k)) {
+          k++;
+        }
+        if (k == regions.length || !regions[k].kept) {
+          break;
+        }
+        final RegExpMatch? member = numbered.firstMatch(regions[k].label);
+        if (member == null ||
+            member.group(1) != head.group(1) ||
+            int.parse(member.group(2)!) != next) {
+          break;
+        }
+        run.add(k);
+        next++;
+        j = k + 1;
+      }
+      if (run.length > 1 && run.any((int k) => own(k) == null)) {
+        series.add((run, head.group(1)!, int.parse(head.group(2)!)));
+        for (int k = run.first; k <= run.last; k++) {
+          done[k] = true;
+        }
+      }
+      i = run.last;
+    }
+
+    // The names that fit their own piece, as they always were.
+    for (int i = 0; i < regions.length; i++) {
+      if (done[i]) {
+        continue;
+      }
+      if (own(i) case final String fits) {
         name(fits, middle(i) - measure(fits) / 2);
         done[i] = true;
       }
@@ -227,52 +310,16 @@ class EvidenceStrip extends StatefulWidget {
               at + width + 6 <= other.$1 || at >= other.$2 + 6,
         ) &&
         notches.every((double n) => n < at - 4 || n > at + width + 4);
-    // Runs of numbered pieces, and what is left with a short form of its own,
-    // each a unit with the pieces it stands for.
-    final RegExp numbered = RegExp(r'^(.*\S)\s+(\d+)$');
-    final RegExp shortNumbered = RegExp(r'^(.*?)(\d+)$');
-    bool unnamed(int i) =>
-        !done[i] && regions[i].kept && regions[i].short.isEmpty;
+    // Each series under one name where one fits it; else, with what is left
+    // that has a short form of its own, a unit for a short form to stand over.
     final List<(List<int>, String?)> units = <(List<int>, String?)>[];
-    for (int i = 0; i < regions.length; i++) {
-      if (done[i]) {
-        continue;
-      }
-      final RegExpMatch? head = numbered.firstMatch(regions[i].label);
-      final List<int> run = <int>[i];
-      if (head != null) {
-        int next = int.parse(head.group(2)!) + 1;
-        int j = i + 1;
-        while (j < regions.length) {
-          int k = j;
-          while (k < regions.length && unnamed(k)) {
-            k++;
-          }
-          if (k == regions.length || done[k]) {
-            break;
-          }
-          final RegExpMatch? member = numbered.firstMatch(regions[k].label);
-          if (member == null ||
-              member.group(1) != head.group(1) ||
-              int.parse(member.group(2)!) != next) {
-            break;
-          }
-          run.add(k);
-          next++;
-          j = k + 1;
-        }
-      }
-      if (run.length < 2) {
-        if (regions[i].short.isNotEmpty) {
-          units.add((run, regions[i].short));
-        }
-        continue;
-      }
-      final int a = int.parse(head!.group(2)!);
+    for (final (List<int> run, String stem, int a) in series) {
       final int b = a + run.length - 1;
-      // The run's short form, where each piece's short is the same stem and
-      // its own number: SR1 … SR24.
-      final RegExpMatch? first = shortNumbered.firstMatch(regions[i].short);
+      // The series' short form, where each piece's short is one stem and its
+      // own number: SR1 … SR24.
+      final RegExpMatch? first = shortNumbered.firstMatch(
+        regions[run.first].short,
+      );
       final String? short =
           first != null &&
               run.every((int k) {
@@ -288,24 +335,26 @@ class EvidenceStrip extends StatefulWidget {
       final double start = from(run.first);
       final double end = to(run.last);
       final String? fits = <String>[
-        '${head.group(1)} $a–$b',
+        '$stem $a–$b',
         ?short,
       ].where((String s) => measure(s) + 4 <= end - start).firstOrNull;
-      final double at = fits == null
-          ? 0
-          : (start + end) / 2 - measure(fits) / 2;
-      if (fits != null && clear(at, measure(fits))) {
-        name(fits, at);
-        for (final int k in run) {
-          done[k] = true;
+      if (fits != null) {
+        final double at = (start + end) / 2 - measure(fits) / 2;
+        if (clear(at, measure(fits))) {
+          name(fits, at);
+          continue;
         }
-      } else {
-        units.add((run, short));
       }
-      i = run.last;
+      units.add((run, short));
+    }
+    for (int i = 0; i < regions.length; i++) {
+      if (!done[i] && regions[i].short.isNotEmpty) {
+        units.add((<int>[i], regions[i].short));
+        done[i] = true;
+      }
     }
     // The short forms centred, the largest piece first; a unit no short can
-    // be set over keeps today's notch on each of its pieces.
+    // be set over keeps a notch on each of its pieces, as before.
     double width(List<int> unit) => to(unit.last) - from(unit.first);
     units.sort(
       ((List<int>, String?) p, (List<int>, String?) q) =>
@@ -318,15 +367,11 @@ class EvidenceStrip extends StatefulWidget {
         final double at = (centre - w / 2).clamp(left, math.max(left, right - w));
         if (clear(at, w)) {
           name(short, at);
-          for (final int k in unit) {
-            done[k] = true;
-          }
           continue;
         }
       }
       for (final int k in unit) {
         notches.add(middle(k));
-        done[k] = true;
       }
     }
     // What is left is an unnamed stretch of the chain: its tick says where it
@@ -506,6 +551,13 @@ class _EvidenceStripState extends State<EvidenceStrip> {
   /// ceiling, and each panel's records and how many of them are drawn.
   late bool _offProtein;
   final Map<StripPanel, bool> _beyond = <StripPanel, bool>{};
+
+  /// Each panel's lanes, a class each in the chips' order, every class it
+  /// holds a scored record of whatever the chips show; none where the page
+  /// draws a plot a panel.
+  final Map<StripPanel, List<ClinVarGroup>> _lanes =
+      <StripPanel, List<ClinVarGroup>>{};
+  int? _sourceLanesFrom;
   final Map<StripPanel, (int, int)> _tallies = <StripPanel, (int, int)>{};
 
   /// The regions a tap on the protein's ground zooms to: those with a record
@@ -542,13 +594,15 @@ class _EvidenceStripState extends State<EvidenceStrip> {
     if (identical(_source, widget.evidence) &&
         setEquals(_sourceClasses, widget.classes) &&
         identical(_sourceRuns, widget.runs) &&
-        identical(_sourceConstraint, widget.constraint)) {
+        identical(_sourceConstraint, widget.constraint) &&
+        _sourceLanesFrom == widget.lanesFrom) {
       return;
     }
     _source = widget.evidence;
     _sourceClasses = Set<ClinVarGroup>.of(widget.classes);
     _sourceRuns = widget.runs;
     _sourceConstraint = widget.constraint;
+    _sourceLanesFrom = widget.lanesFrom;
     _protein = _Records(
       widget.evidence.where(
         (VariantEvidence e) => e.variant.residue != null && widget.drawn(e),
@@ -571,13 +625,28 @@ class _EvidenceStripState extends State<EvidenceStrip> {
     _beyond
       ..[StripPanel.protein] = false
       ..[StripPanel.dna] = false;
+    // Each panel's scored records and their classes, whatever the chips show:
+    // the lanes are the gene's, so choosing classes never moves a mark.
+    final Map<StripPanel, int> scored = <StripPanel, int>{
+      StripPanel.protein: 0,
+      StripPanel.dna: 0,
+    };
+    final Map<StripPanel, Set<ClinVarGroup>> held =
+        <StripPanel, Set<ClinVarGroup>>{
+          StripPanel.protein: <ClinVarGroup>{},
+          StripPanel.dna: <ClinVarGroup>{},
+        };
     for (final VariantEvidence e in widget.evidence) {
       final bool drawn = widget.drawn(e);
       final StripPanel panel = e.variant.residue != null
           ? StripPanel.protein
           : StripPanel.dna;
-      if ((e.avi ?? 0) > GeneImpact.barCeiling) {
-        _beyond[panel] = true;
+      if (e.avi case final double avi) {
+        scored[panel] = scored[panel]! + 1;
+        held[panel]!.add(e.variant.group);
+        if (avi > GeneImpact.barCeiling) {
+          _beyond[panel] = true;
+        }
       }
       if (panel == StripPanel.protein) {
         protein++;
@@ -589,6 +658,17 @@ class _EvidenceStripState extends State<EvidenceStrip> {
       }
     }
     _offProtein = protein < widget.evidence.length;
+    // Both panels in lanes or neither, so the two keep one AVI scale: equal
+    // heights are equal scores across the page.
+    final bool laned = scored.values.any((int n) => n > widget.lanesFrom);
+    for (final StripPanel panel in StripPanel.values) {
+      _lanes[panel] = laned
+          ? <ClinVarGroup>[
+              for (final ClinVarGroup group in ClinVarGroup.values)
+                if (held[panel]!.contains(group)) group,
+            ]
+          : const <ClinVarGroup>[];
+    }
     _tallies
       ..[StripPanel.protein] = (protein, proteinDrawn)
       ..[StripPanel.dna] = (widget.evidence.length - protein, dnaDrawn);
@@ -841,6 +921,26 @@ class _EvidenceStripState extends State<EvidenceStrip> {
       128.0,
     );
     final bool offProtein = _offProtein;
+    // In lanes, one lane height for both panels, so they keep one AVI scale:
+    // the page's most lanes in as much as the screen can spare, 175 points
+    // on an 874-point phone, and never so little that a lane's numbers meet.
+    final double head = _Geometry.laneHeadFor(labelScale);
+    final int most = math.max(
+      _lanes[StripPanel.protein]!.length,
+      offProtein ? _lanes[StripPanel.dna]!.length : 0,
+    );
+    final double lane = most == 0
+        ? 0
+        : math.max(
+            _Geometry.minLaneAreaFor(labelScale),
+            ((MediaQuery.sizeOf(context).height * 0.2).clamp(120.0, 176.0) -
+                    (most - 1) * head) /
+                most,
+          );
+    double plotOf(StripPanel panel) {
+      final int n = _lanes[panel]!.length;
+      return n == 0 ? plot : n * lane + (n - 1) * head;
+    }
     return Column(
       key: const ValueKey<String>('evidence-strip'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -853,7 +953,7 @@ class _EvidenceStripState extends State<EvidenceStrip> {
           ..._piece(
             context,
             panel,
-            plot: plot,
+            plot: plotOf(panel),
             ceiling: ceiling,
             labelScale: labelScale,
           ),
@@ -1000,17 +1100,28 @@ class _EvidenceStripState extends State<EvidenceStrip> {
     final bool zoomed = _zoomed(panel);
     final bool live = _live.containsKey(panel);
     final String wholeName = protein ? 'the whole protein' : 'the whole gene';
+    final List<ClinVarGroup> lanes = _lanes[panel]!;
+    final String where = protein
+        ? 'on the ${widget.proteinLength} residues of the protein'
+        : 'outside the protein, on the gene’s $_dnaKinds';
+    final String shown = drawn == count ? '' : ', of the classes shown';
+    // In lanes, the rows are said by name, as the chips name them.
+    final String rows = switch (lanes) {
+      <ClinVarGroup>[] => '',
+      <ClinVarGroup>[final ClinVarGroup one] => one.short,
+      _ =>
+        '${lanes.take(lanes.length - 1).map((ClinVarGroup g) => g.short).join(', ')} '
+            'and ${lanes.last.short}',
+    };
     return Semantics(
       container: true,
-      label: protein
-          ? '$drawn ClinVar records on the ${widget.proteinLength} residues '
-                'of the protein${drawn == count ? '' : ', of the classes shown'}. '
+      label: lanes.isEmpty
+          ? '$drawn ClinVar records $where$shown. '
                 'Heights are each record’s AVI score, with a dashed line at '
                 '20, the top 1% genome-wide, and colours are ClinVar classes.'
-          : '$drawn ClinVar records outside the protein, on the gene’s '
-                '$_dnaKinds${drawn == count ? '' : ', of the classes shown'}. '
-                'Heights are each record’s AVI score, with a dashed line at '
-                '20, the top 1% genome-wide, and colours are ClinVar classes.',
+          : '$drawn ClinVar records $where$shown, in a row for each class: '
+                '$rows. Heights are each record’s AVI score, a record past 40 '
+                'at the top, with a dashed line at 20, the top 1% genome-wide.',
       value: _title(panel),
       customSemanticsActions: widget.onWindow == null
           ? null
@@ -1048,6 +1159,7 @@ class _EvidenceStripState extends State<EvidenceStrip> {
                   ceiling: ceiling,
                   window: (window.dx, window.dy),
                   labelScale: labelScale,
+                  lanes: _lanes[panel]!,
                 );
                 final _MarkBatch batch = _batch(panel, records, geometry);
                 return RawGestureDetector(
@@ -1105,6 +1217,7 @@ class _EvidenceStripState extends State<EvidenceStrip> {
       geometry.window,
       geometry.plot,
       geometry.ceiling,
+      Object.hashAll(geometry.lanes),
       Object.hashAllUnordered(widget.selected),
     );
     final (Object, _MarkBatch)? memo = _batches[panel];
@@ -1123,24 +1236,41 @@ class _EvidenceStripState extends State<EvidenceStrip> {
       hits.add((
         e.variant.id,
         e.variant.group,
-        Offset(geometry.x(u), geometry.y(records.avis[i])),
+        Offset(
+          geometry.x(u),
+          geometry.y(records.avis[i], geometry.laneOf(e.variant.group)),
+        ),
       ));
     }
-    final double perMark = geometry.width / math.max(1, hits.length);
-    final bool stems = EvidenceStrip.stems(perMark);
-    final double radius = EvidenceStrip.headRadius(perMark);
+    // One plot is crowded by all its marks; a lane by its own class's alone.
+    final _Ink ink = _Ink.of(geometry.width / math.max(1, hits.length));
+    final Map<ClinVarGroup, _Ink> inks = <ClinVarGroup, _Ink>{};
+    if (geometry.lanes.isNotEmpty) {
+      final Map<ClinVarGroup, int> counts = <ClinVarGroup, int>{};
+      for (final (String _, ClinVarGroup group, Offset _) in hits) {
+        counts[group] = (counts[group] ?? 0) + 1;
+      }
+      for (final MapEntry<ClinVarGroup, int> count in counts.entries) {
+        inks[count.key] = _Ink.of(
+          geometry.width / math.max(1, count.value),
+          fades: true,
+        );
+      }
+    }
     final Map<ClinVarGroup, List<double>> heads =
         <ClinVarGroup, List<double>>{};
     final List<double> stemPoints = <double>[];
     final List<Offset> rings = <Offset>[];
-    final double ground = protein
-        ? geometry.groundTop
-        : geometry.geneLine - 3;
     for (final (String id, ClinVarGroup group, Offset at) in hits) {
       (heads[group] ??= <double>[])
         ..add(at.dx)
         ..add(at.dy);
-      if (stems) {
+      if ((inks[group] ?? ink).stems) {
+        final double ground = geometry.lanes.isNotEmpty
+            ? geometry.areaBottom(geometry.laneOf(group))
+            : protein
+            ? geometry.groundTop
+            : geometry.geneLine - 3;
         stemPoints
           ..add(at.dx)
           ..add(ground)
@@ -1160,10 +1290,8 @@ class _EvidenceStripState extends State<EvidenceStrip> {
       },
       stems: Float32List.fromList(stemPoints),
       rings: rings,
-      radius: radius,
-      // A halo is what keeps a full-size head legible over its neighbours;
-      // around small ones it would erase more than it separates.
-      halo: radius >= 3.4,
+      inks: inks,
+      ink: ink,
     );
     _batches[panel] = (key, batch);
     return batch;
@@ -1246,10 +1374,15 @@ class _EvidenceStripState extends State<EvidenceStrip> {
     _MarkBatch batch,
     Offset at,
   ) {
+    // In lanes a finger means the lane it is on: its name row or its area.
+    final List<ClinVarGroup> lanes = geometry.lanes;
+    final int? under = geometry.laneAt(at.dy);
     final List<(String, ClinVarGroup, Offset)> near =
         <(String, ClinVarGroup, Offset)>[
           for (final (String, ClinVarGroup, Offset) hit in batch.hits)
-            if ((hit.$3 - at).distance <= 18) hit,
+            if ((hit.$3 - at).distance <= 18 &&
+                (under == null || hit.$2 == lanes[under]))
+              hit,
         ]..sort(
           (
             (String, ClinVarGroup, Offset) a,
@@ -1293,13 +1426,15 @@ class _EvidenceStripState extends State<EvidenceStrip> {
     // The mark tapped is the one nearest the finger. Heads drawn over one
     // another answer one tap between them, top first as they are painted —
     // the most severe class, and within a class the last drawn — so a place
-    // steps through them in one order wherever the finger lands on it.
-    final double touching = 2 * batch.radius;
-    List<String> pile(Offset head) {
+    // steps through them in one order wherever the finger lands on it. In
+    // lanes, a pile is its own lane's: no other class is drawn over it.
+    double touching(ClinVarGroup group) => 2 * batch.inkOf(group).radius;
+    List<String> pile(Offset head, ClinVarGroup group) {
       final List<(int, ClinVarGroup, String)> heads =
           <(int, ClinVarGroup, String)>[
             for (int i = 0; i < batch.hits.length; i++)
-              if ((batch.hits[i].$3 - head).distance <= touching)
+              if ((batch.hits[i].$3 - head).distance <= touching(group) &&
+                  (lanes.isEmpty || batch.hits[i].$2 == group))
                 (i, batch.hits[i].$2, batch.hits[i].$1),
           ]..sort((
             (int, ClinVarGroup, String) a,
@@ -1314,14 +1449,17 @@ class _EvidenceStripState extends State<EvidenceStrip> {
     }
 
     final Offset tapped = near.first.$3;
+    final ClinVarGroup touched = near.first.$2;
     // A tap on the selected mark, or on a head drawn over it, moves on to the
     // next of its pile, and after the last lets it go: a head alone is a
     // pile of one, so a second tap on it is the way to put it down.
     if (widget.selected.length == 1) {
       final String current = widget.selected.single;
-      for (final (String id, ClinVarGroup _, Offset head) in batch.hits) {
-        if (id == current && (head - tapped).distance <= touching) {
-          final List<String> heads = pile(head);
+      for (final (String id, ClinVarGroup group, Offset head) in batch.hits) {
+        if (id == current &&
+            (head - tapped).distance <= touching(group) &&
+            (lanes.isEmpty || group == touched)) {
+          final List<String> heads = pile(head, group);
           final int next = heads.indexOf(current) + 1;
           if (next < heads.length) {
             widget.onSelected(heads[next], (next + 1, heads.length));
@@ -1332,7 +1470,7 @@ class _EvidenceStripState extends State<EvidenceStrip> {
         }
       }
     }
-    final List<String> heads = pile(tapped);
+    final List<String> heads = pile(tapped, touched);
     widget.onSelected(heads.first, (1, heads.length));
   }
 
@@ -1733,8 +1871,8 @@ final class _MarkBatch {
     required this.heads,
     required this.stems,
     required this.rings,
-    required this.radius,
-    required this.halo,
+    required this.inks,
+    required this.ink,
   });
 
   final List<(String, ClinVarGroup, Offset)> hits;
@@ -1743,8 +1881,42 @@ final class _MarkBatch {
 
   /// Where the selected records' heads are.
   final List<Offset> rings;
+
+  /// How each lane's heads are drawn; in one plot, every class's is [ink].
+  final Map<ClinVarGroup, _Ink> inks;
+  final _Ink ink;
+
+  _Ink inkOf(ClinVarGroup group) => inks[group] ?? ink;
+}
+
+/// How a plot's or a lane's heads are drawn, for how crowded it is.
+@immutable
+final class _Ink {
+  const _Ink({
+    required this.radius,
+    required this.halo,
+    required this.stems,
+    this.opacity = 1,
+  });
+
+  /// The ink of [perMark] points of panel for each mark: [opacity] fades
+  /// only in a lane, where every mark under a head is its own class's.
+  factory _Ink.of(double perMark, {bool fades = false}) {
+    final double radius = EvidenceStrip.headRadius(perMark);
+    return _Ink(
+      radius: radius,
+      // A halo is what keeps a full-size head legible over its neighbours;
+      // around small ones it would erase more than it separates.
+      halo: radius >= 3.4,
+      stems: EvidenceStrip.stems(perMark),
+      opacity: fades ? EvidenceStrip.headOpacity(perMark) : 1,
+    );
+  }
+
   final double radius;
   final bool halo;
+  final bool stems;
+  final double opacity;
 }
 
 /// A named piece of the gene with records on it, in gene coordinates.
@@ -1765,14 +1937,54 @@ final class _Geometry {
     required this.ceiling,
     required this.window,
     this.labelScale = 1,
+    this.lanes = const <ClinVarGroup>[],
   });
 
   final Size size;
   final double labelScale;
 
-  /// The AVI area's height.
+  /// The AVI area's height: the one plot, or every lane and the rows naming
+  /// them.
   final double plot;
   final double ceiling;
+
+  /// The panel's lanes, top to bottom, or none for one plot.
+  final List<ClinVarGroup> lanes;
+
+  /// The row naming a lane, over its area: the name, and room for a head
+  /// standing on the ceiling under it and one standing on zero over it.
+  static double laneHeadFor(double labelScale) => labelSize * labelScale + 6;
+  double get laneHead => laneHeadFor(labelScale);
+
+  /// The least a lane's area may be: room for its ceiling's, 20's and zero's
+  /// numbers apart.
+  static double minLaneAreaFor(double labelScale) =>
+      2 * labelSize * labelScale + 4;
+
+  /// Each lane's own AVI area; the first lane's name stands in the room over
+  /// the plot, beside the axis's name.
+  double get laneArea => lanes.length < 2
+      ? plot
+      : (plot - (lanes.length - 1) * laneHead) / lanes.length;
+
+  double areaTop(int lane) =>
+      lanes.isEmpty ? top : top + lane * (laneArea + laneHead);
+  double areaBottom(int lane) =>
+      lanes.isEmpty ? groundTop : areaTop(lane) + laneArea;
+
+  /// The lane a class's marks stand in; the one plot is lane 0.
+  int laneOf(ClinVarGroup group) =>
+      lanes.isEmpty ? 0 : math.max(0, lanes.indexOf(group));
+
+  /// The lane whose name row or area holds [dy], or null off them all.
+  int? laneAt(double dy) {
+    for (int i = 0; i < lanes.length; i++) {
+      if (dy >= areaTop(i) - laneHead && dy <= areaBottom(i)) {
+        return i;
+      }
+    }
+    return null;
+  }
 
   /// The stretch drawn across the panel, in the panel's own coordinates.
   final (double, double) window;
@@ -1814,8 +2026,12 @@ final class _Geometry {
 
   bool visible(double u) => u >= window.$1 && u <= window.$2;
 
-  double y(double phred) =>
-      groundTop - 2 - math.min(phred, ceiling) / ceiling * (groundTop - 2 - top);
+  /// Where [phred] stands in [lane]: zero two points over its floor, the
+  /// ceiling at its top, and anything past the ceiling on it.
+  double y(double phred, [int lane = 0]) =>
+      areaBottom(lane) -
+      2 -
+      math.min(phred, ceiling) / ceiling * (areaBottom(lane) - 2 - areaTop(lane));
 }
 
 class _StripPainter extends CustomPainter {
@@ -1953,9 +2169,13 @@ class _StripPainter extends CustomPainter {
     // gutter, the ceiling under it, zero at the floor, and the top-1% line,
     // drawn dashed and named at the plot's top right, where no mark can sit
     // on the words: at the line's own end the marks of a dense stretch did.
+    // In lanes the axis is numbered once, on the first lane, every lane
+    // sharing its scale; a lane too short for three numbers keeps two.
     _label(canvas, 'AVI', const Offset(0, 2));
     for (final double value in <double>[
-      GeneImpact.highPhred,
+      if (g.lanes.isEmpty ||
+          g.laneArea >= _Geometry.minLaneAreaFor(labelScale))
+        GeneImpact.highPhred,
       g.ceiling,
       0,
     ]) {
@@ -1967,13 +2187,43 @@ class _StripPainter extends CustomPainter {
         align: TextAlign.right,
       );
     }
-    final double twenty = g.y(GeneImpact.highPhred);
-    for (double x = g.left; x < g.right; x += 6) {
-      canvas.drawLine(
-        Offset(x, twenty),
-        Offset(math.min(x + 3, g.right), twenty),
-        guide,
-      );
+    for (int lane = 0; lane < math.max(1, g.lanes.length); lane++) {
+      final double twenty = g.y(GeneImpact.highPhred, lane);
+      for (double x = g.left; x < g.right; x += 6) {
+        canvas.drawLine(
+          Offset(x, twenty),
+          Offset(math.min(x + 3, g.right), twenty),
+          guide,
+        );
+      }
+    }
+    // Each lane named over it by its class, as the chips name them, after
+    // the class's own dot; a lane's floor is a hairline, but the last's,
+    // which is the ground.
+    for (int lane = 0; lane < g.lanes.length; lane++) {
+      final ClinVarGroup group = g.lanes[lane];
+      final double top = g.areaTop(lane) - g.laneHead + 2.5;
+      final Offset dot = Offset(g.left + 3.5, top + half);
+      if (ClinVarColors.hollow(group)) {
+        canvas.drawCircle(
+          dot,
+          2.75,
+          Paint()
+            ..color = ClinVarColors.of(group)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
+      } else {
+        canvas.drawCircle(dot, 3.5, Paint()..color = ClinVarColors.of(group));
+      }
+      _label(canvas, group.short, Offset(g.left + 12, top), mono: false);
+      if (lane + 1 < g.lanes.length) {
+        canvas.drawLine(
+          Offset(g.left, g.areaBottom(lane)),
+          Offset(g.right, g.areaBottom(lane)),
+          guide,
+        );
+      }
     }
     if (nameTwenty) {
       const String name = 'top 1% genome-wide';
@@ -2175,25 +2425,30 @@ class _StripPainter extends CustomPainter {
       if (points == null || points.isEmpty) {
         continue;
       }
-      if (b.halo) {
+      final _Ink ink = b.inkOf(group);
+      // A lane's heads fade as they crowd, each over its own class's alone.
+      final Color colour = ink.opacity < 1
+          ? ClinVarColors.of(group).withValues(alpha: ink.opacity)
+          : ClinVarColors.of(group);
+      if (ink.halo) {
         canvas.drawRawPoints(
           ui.PointMode.points,
           points,
           Paint()
             ..color = colors.surface
-            ..strokeWidth = 2 * (b.radius + 1.2)
+            ..strokeWidth = 2 * (ink.radius + 1.2)
             ..strokeCap = StrokeCap.round,
         );
       }
       if (ClinVarColors.hollow(group)) {
         final Paint ring = Paint()
-          ..color = ClinVarColors.of(group)
+          ..color = colour
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5;
         for (int i = 0; i + 1 < points.length; i += 2) {
           canvas.drawCircle(
             Offset(points[i], points[i + 1]),
-            b.radius - 0.75,
+            ink.radius - 0.75,
             ring,
           );
         }
@@ -2202,8 +2457,8 @@ class _StripPainter extends CustomPainter {
           ui.PointMode.points,
           points,
           Paint()
-            ..color = ClinVarColors.of(group)
-            ..strokeWidth = 2 * b.radius
+            ..color = colour
+            ..strokeWidth = 2 * ink.radius
             ..strokeCap = StrokeCap.round,
         );
       }
@@ -2227,6 +2482,7 @@ class _StripPainter extends CustomPainter {
       old.geometry.window != geometry.window ||
       old.geometry.plot != geometry.plot ||
       old.geometry.ceiling != geometry.ceiling ||
+      !listEquals(old.geometry.lanes, geometry.lanes) ||
       old.constraint != constraint ||
       old.zoomed != zoomed ||
       old.colors != colors ||
