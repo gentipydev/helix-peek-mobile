@@ -163,6 +163,177 @@ class EvidenceStrip extends StatefulWidget {
       ? 2.6
       : 2.0;
 
+  /// What the protein's ground says at the whole view: the names of its
+  /// pieces, each with the left edge it is drawn from, and its notches.
+  ///
+  /// A piece is named as it always was where a name of its own fits its span:
+  /// its label, its label's first word, or its short form. Where none fits:
+  /// - a piece cut out of the mature protein keeps its notch, as every
+  ///   cleavage site and initiator methionine always had;
+  /// - a run of numbered pieces with only unnamed stretches of the chain
+  ///   between them takes one name over the run where that fits it:
+  ///   dystrophin's `Spectrin repeat 1–24`, else `SR1–24`;
+  /// - a piece kept in the protein with a short form, or such a run, puts the
+  ///   short form centred over it, the largest first, where it runs into no
+  ///   name or notch already placed, and keeps its notch where it would;
+  /// - a piece kept in the protein with no short form is an unnamed stretch
+  ///   of the chain between named ones, and keeps only its tick.
+  ///
+  /// Until 2026-11-18 every piece too narrow for a name was a notch, and
+  /// dystrophin's whole protein read as 53 notches and not one name.
+  static ({List<(String, double)> names, List<double> notches}) groundNames(
+    List<ConstraintRegion> regions, {
+    required double Function(double u) x,
+    required double Function(String text) measure,
+    required double left,
+    required double right,
+  }) {
+    final List<(String, double)> names = <(String, double)>[];
+    final List<double> notches = <double>[];
+    final List<(double, double)> taken = <(double, double)>[];
+    final List<bool> done = List<bool>.filled(regions.length, false);
+    double from(int i) => x(regions[i].start - 1.0);
+    double to(int i) => x(regions[i].end.toDouble());
+    double middle(int i) => (from(i) + to(i)) / 2;
+    void name(String text, double at) {
+      names.add((text, at));
+      taken.add((at, at + measure(text)));
+    }
+
+    // The names that fit their own piece, as they always were.
+    for (int i = 0; i < regions.length; i++) {
+      final ConstraintRegion region = regions[i];
+      final double span = to(i) - from(i);
+      final String? fits = <String>[
+        region.label,
+        region.label.split(' ').first,
+        region.short,
+      ].where((String s) => s.isNotEmpty && measure(s) + 4 <= span).firstOrNull;
+      if (fits != null) {
+        name(fits, middle(i) - measure(fits) / 2);
+        done[i] = true;
+      }
+    }
+    // The pieces cut out of the mature protein.
+    for (int i = 0; i < regions.length; i++) {
+      if (!done[i] && !regions[i].kept) {
+        notches.add(middle(i));
+        done[i] = true;
+      }
+    }
+    bool clear(double at, double width) =>
+        taken.every(
+          ((double, double) other) =>
+              at + width + 6 <= other.$1 || at >= other.$2 + 6,
+        ) &&
+        notches.every((double n) => n < at - 4 || n > at + width + 4);
+    // Runs of numbered pieces, and what is left with a short form of its own,
+    // each a unit with the pieces it stands for.
+    final RegExp numbered = RegExp(r'^(.*\S)\s+(\d+)$');
+    final RegExp shortNumbered = RegExp(r'^(.*?)(\d+)$');
+    bool unnamed(int i) =>
+        !done[i] && regions[i].kept && regions[i].short.isEmpty;
+    final List<(List<int>, String?)> units = <(List<int>, String?)>[];
+    for (int i = 0; i < regions.length; i++) {
+      if (done[i]) {
+        continue;
+      }
+      final RegExpMatch? head = numbered.firstMatch(regions[i].label);
+      final List<int> run = <int>[i];
+      if (head != null) {
+        int next = int.parse(head.group(2)!) + 1;
+        int j = i + 1;
+        while (j < regions.length) {
+          int k = j;
+          while (k < regions.length && unnamed(k)) {
+            k++;
+          }
+          if (k == regions.length || done[k]) {
+            break;
+          }
+          final RegExpMatch? member = numbered.firstMatch(regions[k].label);
+          if (member == null ||
+              member.group(1) != head.group(1) ||
+              int.parse(member.group(2)!) != next) {
+            break;
+          }
+          run.add(k);
+          next++;
+          j = k + 1;
+        }
+      }
+      if (run.length < 2) {
+        if (regions[i].short.isNotEmpty) {
+          units.add((run, regions[i].short));
+        }
+        continue;
+      }
+      final int a = int.parse(head!.group(2)!);
+      final int b = a + run.length - 1;
+      // The run's short form, where each piece's short is the same stem and
+      // its own number: SR1 … SR24.
+      final RegExpMatch? first = shortNumbered.firstMatch(regions[i].short);
+      final String? short =
+          first != null &&
+              run.every((int k) {
+                final RegExpMatch? m = shortNumbered.firstMatch(
+                  regions[k].short,
+                );
+                return m != null &&
+                    m.group(1) == first.group(1) &&
+                    int.parse(m.group(2)!) == a + run.indexOf(k);
+              })
+          ? '${first.group(1)}$a–$b'
+          : null;
+      final double start = from(run.first);
+      final double end = to(run.last);
+      final String? fits = <String>[
+        '${head.group(1)} $a–$b',
+        ?short,
+      ].where((String s) => measure(s) + 4 <= end - start).firstOrNull;
+      final double at = fits == null
+          ? 0
+          : (start + end) / 2 - measure(fits) / 2;
+      if (fits != null && clear(at, measure(fits))) {
+        name(fits, at);
+        for (final int k in run) {
+          done[k] = true;
+        }
+      } else {
+        units.add((run, short));
+      }
+      i = run.last;
+    }
+    // The short forms centred, the largest piece first; a unit no short can
+    // be set over keeps today's notch on each of its pieces.
+    double width(List<int> unit) => to(unit.last) - from(unit.first);
+    units.sort(
+      ((List<int>, String?) p, (List<int>, String?) q) =>
+          width(q.$1).compareTo(width(p.$1)),
+    );
+    for (final (List<int> unit, String? short) in units) {
+      if (short != null) {
+        final double w = measure(short);
+        final double centre = (from(unit.first) + to(unit.last)) / 2;
+        final double at = (centre - w / 2).clamp(left, math.max(left, right - w));
+        if (clear(at, w)) {
+          name(short, at);
+          for (final int k in unit) {
+            done[k] = true;
+          }
+          continue;
+        }
+      }
+      for (final int k in unit) {
+        notches.add(middle(k));
+        done[k] = true;
+      }
+    }
+    // What is left is an unnamed stretch of the chain: its tick says where it
+    // starts, and nothing more.
+    return (names: names, notches: notches);
+  }
+
   /// The window a tap on [region]'s name zooms to: two residues either side,
   /// so the cut site between two chains stays in view from both of them.
   static StripWindow regionWindow(ConstraintRegion region, int proteinLength) =>
@@ -330,11 +501,11 @@ class _EvidenceStripState extends State<EvidenceStrip> {
   late _Records _dna;
 
   /// What the strip reads off every record, worked out once for the records,
-  /// classes and pieces it is given rather than on every build: the AVI
-  /// ceiling, whether any record is off the protein, and each panel's records
-  /// and how many of them are drawn.
-  late double _ceiling;
+  /// classes and pieces it is given rather than on every build: whether any
+  /// record is off the protein, whether a panel holds a record past the AVI
+  /// ceiling, and each panel's records and how many of them are drawn.
   late bool _offProtein;
+  final Map<StripPanel, bool> _beyond = <StripPanel, bool>{};
   final Map<StripPanel, (int, int)> _tallies = <StripPanel, (int, int)>{};
 
   /// The regions a tap on the protein's ground zooms to: those with a record
@@ -391,16 +562,24 @@ class _EvidenceStripState extends State<EvidenceStrip> {
       widget.coordinate,
     );
     _batches.clear();
-    double highest = 0;
     // Each panel's records, and those of them in the classes drawn, with an
-    // AVI score or without.
+    // AVI score or without; and whether any stands past the ceiling, whatever
+    // the classes drawn.
     int protein = 0;
     int proteinDrawn = 0;
     int dnaDrawn = 0;
+    _beyond
+      ..[StripPanel.protein] = false
+      ..[StripPanel.dna] = false;
     for (final VariantEvidence e in widget.evidence) {
-      highest = math.max(highest, e.avi ?? 0);
       final bool drawn = widget.drawn(e);
-      if (e.variant.residue != null) {
+      final StripPanel panel = e.variant.residue != null
+          ? StripPanel.protein
+          : StripPanel.dna;
+      if ((e.avi ?? 0) > GeneImpact.barCeiling) {
+        _beyond[panel] = true;
+      }
+      if (panel == StripPanel.protein) {
         protein++;
         if (drawn) {
           proteinDrawn++;
@@ -409,7 +588,6 @@ class _EvidenceStripState extends State<EvidenceStrip> {
         dnaDrawn++;
       }
     }
-    _ceiling = math.max(GeneImpact.barCeiling, (highest / 10).ceil() * 10.0);
     _offProtein = protein < widget.evidence.length;
     _tallies
       ..[StripPanel.protein] = (protein, proteinDrawn)
@@ -623,7 +801,12 @@ class _EvidenceStripState extends State<EvidenceStrip> {
   @override
   Widget build(BuildContext context) {
     _cache();
-    final double ceiling = _ceiling;
+    // The base sheet's own ceiling, the same for every gene and both panels,
+    // as the bars and the AVI and ESM-2 page's scatter draw it: a record past
+    // it stands on it, its value in its card and its row. Until 2026-11-18
+    // the gene's highest record set it, and dystrophin's 69.2 gave 43% of the
+    // plot to 1.5% of its records.
+    const double ceiling = GeneImpact.barCeiling;
     final double labelScale = MediaQuery.textScalerOf(
       context,
     ).scale(1).clamp(1.0, 1.3);
@@ -887,6 +1070,7 @@ class _EvidenceStripState extends State<EvidenceStrip> {
                         pieces: pieces,
                         colors: theme.colorScheme,
                         labelScale: labelScale,
+                        beyond: _beyond[panel] ?? false,
                         // The first panel names its dashed line; the one
                         // under it shares the scale and the name.
                         nameTwenty:
@@ -1646,6 +1830,7 @@ class _StripPainter extends CustomPainter {
     required this.pieces,
     required this.colors,
     required this.labelScale,
+    this.beyond = false,
     this.nameTwenty = true,
     this.empty,
   });
@@ -1661,6 +1846,10 @@ class _StripPainter extends CustomPainter {
 
   /// Whether the dashed line is named at its end: on the first panel drawn.
   final bool nameTwenty;
+
+  /// Whether a record of the panel stands past the ceiling, which its number
+  /// then says: "40+", as the base sheet's scale says "40 or higher".
+  final bool beyond;
 
   /// The gene's exons and named pieces, in the panel's coordinates.
   final List<(double, double)> exons;
@@ -1701,10 +1890,31 @@ class _StripPainter extends CustomPainter {
     painter.dispose();
   }
 
+  /// Widths already measured, by text, size and face: the whole protein's
+  /// names are measured on every frame of a zoom back out to it, and
+  /// dystrophin has 53 pieces, each tried under up to three names.
+  static final Map<(String, double, bool), double> _widths =
+      <(String, double, bool), double>{};
+
   double _measure(
     String text, {
     double size = _Geometry.labelSize,
     bool mono = false,
+  }) {
+    final (String, double, bool) key = (text, size * labelScale, mono);
+    if (_widths[key] case final double known) {
+      return known;
+    }
+    if (_widths.length > 4000) {
+      _widths.clear();
+    }
+    return _widths[key] = _measured(text, size: size, mono: mono);
+  }
+
+  double _measured(
+    String text, {
+    required double size,
+    required bool mono,
   }) {
     final TextPainter painter = TextPainter(
       text: TextSpan(
@@ -1751,7 +1961,8 @@ class _StripPainter extends CustomPainter {
     ]) {
       _label(
         canvas,
-        value.toStringAsFixed(0),
+        '${value.toStringAsFixed(0)}'
+        '${beyond && value == g.ceiling ? '+' : ''}',
         Offset(g.left - 6, g.y(value) - half),
         align: TextAlign.right,
       );
@@ -1860,29 +2071,22 @@ class _StripPainter extends CustomPainter {
       }
       return;
     }
-    // Named where the name fits; a piece too short for a word — a cut site —
-    // is a notch.
-    for (final ConstraintRegion region in track.regions) {
-      final double from = g.x(region.start - 1.0);
-      final double to = g.x(region.end.toDouble());
-      final double span = to - from;
-      final String name = region.label;
-      final String? fits = <String>[
-        name,
-        name.split(' ').first,
-        region.short,
-      ].where((String s) => s.isNotEmpty && _measure(s) + 4 <= span).firstOrNull;
-      if (fits != null) {
-        _label(
-          canvas,
-          fits,
-          Offset((from + to) / 2, g.namesTop),
-          align: TextAlign.center,
-          mono: false,
+    // Named where a name fits, a run of numbered pieces under one name, a
+    // short form set over a piece too narrow for it where it is clear, and a
+    // notch where a piece is cut out or nothing could be set over it.
+    final ({List<(String, double)> names, List<double> notches}) ground =
+        EvidenceStrip.groundNames(
+          track.regions,
+          x: g.x,
+          measure: _measure,
+          left: g.left,
+          right: g.right,
         );
-      } else {
-        _notch(canvas, (from + to) / 2, g.bandBottom);
-      }
+    for (final (String text, double at) in ground.names) {
+      _label(canvas, text, Offset(at, g.namesTop), mono: false);
+    }
+    for (final double at in ground.notches) {
+      _notch(canvas, at, g.bandBottom);
     }
   }
 
@@ -2027,6 +2231,7 @@ class _StripPainter extends CustomPainter {
       old.zoomed != zoomed ||
       old.colors != colors ||
       old.labelScale != labelScale ||
+      old.beyond != beyond ||
       old.nameTwenty != nameTwenty ||
       old.empty != empty;
 }
