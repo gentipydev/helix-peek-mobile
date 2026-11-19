@@ -884,13 +884,21 @@ seen:
   its territory, and on the way out turns into a smooth tube that is, by
   the time it lies along the genome, the band map's strip pixel for pixel;
 - a genome map of the band opened out of the whole chromosome; the gene,
-  opened out of its mark on the band's strip, as a genome browser draws a
-  transcript, the record's exons at their real lengths, still (its own stop
-  again, the user's choice of 2026-10-15, after a day as one stop with the
-  DNA); and its DNA from the 5′ end, chromatin and then the home screen's
-  own double helix (`DnaHelixPainter`, from `lib/shared/helix/`), lying 5′
-  to 3′ with the record's first bases, whole: unlike the home screen's,
-  nothing transcribes it (`transcription: null`), so no strand peels away.
+  opened out of its mark on the band's strip, still (its own stop again,
+  the user's choice of 2026-10-15, after a day as one stop with the DNA):
+  a stretch of chromatin, its nucleosomes wound and larger than life, and
+  its exons, the record's at their real lengths, as a genome browser draws
+  a transcript, as quiet bands behind the chromatin, coding parts tall and
+  untranslated ends short, the DNA along them in the accent's two
+  strengths, so that no nucleosome is covered (the user's choice of
+  2026-11-18); and its DNA from the 5′ end, one DNA all the way: the bands
+  sink behind it, its beads wind in and grow to their size, and it is a lit
+  tube whose grooves come up as ridges, the helix's own backbones turning
+  with it (`DnaGrooves`), until its skin over the record's first bases
+  clears onto the home screen's own double helix (`DnaHelixPainter`, from
+  `lib/shared/helix/`), lying 5′ to 3′ with those bases, whole: unlike the
+  home screen's, nothing transcribes it (`transcription: null`), so no
+  strand peels away.
   The gene reads 5′ to 3′ from its first frame whatever its strand, a
   reverse one mirrored about its middle: its mark on the strip has nothing
   inside it to turn, so nothing turns.
@@ -910,8 +918,10 @@ the gene. The card says the place and one line of data, nothing that
 explains: there is no About sheet, no source tag and no player. Its
 colours are the app's own (`ZoomInks`): one ground at every stop, the
 accent for the gene and what it makes (the organs its RNA is raised in, its
-cell, its protein, its chromosome's territory, its band) and nothing else,
-and every other form sculpted in the warm neutrals; a chromosome's are
+cell, its protein, its chromosome's territory, its band, its exons) and
+nothing else, and every other form sculpted in the warm neutrals (a
+nucleosome's core in the chromosome's stone); `ZoomInks` no longer carries
+the walk's gene-part colours; a chromosome's are
 ramps in the theme (`core/theme/chromosome_colors.dart`: a ramp each,
 crevice to specular, mixed from the app's own colours: the stone, the
 helix's clay and honey over it, and the organs' home tone for the gene's

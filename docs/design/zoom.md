@@ -786,12 +786,34 @@ convention is, where it comes from, and what it decided:
 - **The gene's place.** Its span is that of its MANE Select transcript on
   GRCh38 (Morales et al. 2022), and its bands the UCSC Genome Browser's
   cytoBand table.
-- **Nucleosomes.** 147 base pairs wrap a core of eight histones (Luger et
-  al. 1997; Davey et al. 2002), about one core every 200. At the start of a
-  gene that is read there is a stretch free of them, with a positioned
-  nucleosome just downstream (Schones et al. 2008). *Consequence:* the gene
-  is a fibre of cores 200 bp apart, bare at its 5′ end.
-- **The helix.** A base pair every 0.34 nm, about ten and a half to a turn.
+- **A gene drawn on its chromatin.** Genome browsers draw a transcript in
+  one hue, its height telling its parts apart: UCSC's coding exons are
+  thick blocks, its untranslated ends thinner ones and its introns a line
+  (<https://genome.ucsc.edu/goldenPath/help/customTrack.html>); Ensembl
+  fills its coding boxes and leaves its untranslated ones empty
+  (<https://www.ensembl.org/Help/Faq?id=185>). *Consequence:* the gene's
+  stop draws its exons as that glyph, in the accent's two strengths, as
+  bands behind its chromatin, so that no nucleosome is covered, and its DNA
+  along them in their colours (the user's choice of 2026-11-18).
+- **Nucleosomes.** 147 base pairs wrap a core of eight histones in some
+  1.65 left-handed turns, a particle about 11 nm across and 5.5 nm tall
+  (Luger et al. 1997; Davey et al. 2002), about one core every 200. At the
+  start of a gene that is read there is a stretch free of them: the 5′ edge
+  of the first nucleosome downstream lies 40 bp past the transcription start
+  in active promoters and 10 bp in silent ones, with eight nucleosomes
+  phased round the start of expressed genes (Schones et al. 2008, Fig. 2).
+  Exons hold more nucleosomes than introns, as a pattern of the genome
+  rather than a rule for each exon (Schwartz et al. 2009; Tilgner et al.
+  2009). In a nucleus chromatin is a disordered chain 5 to 24 nm thick,
+  with no regular 30 nm fibre (Ou et al. 2017). *Consequence:* the gene is
+  a fibre of cores 200 bp apart, bare at its 5′ end, its first core 40 bp
+  in, beads on a string all the way down; its exons get no cores of their
+  own (see "Textbook packing").
+- **The helix.** A base pair every 0.34 nm, about ten and a half to a turn,
+  the duplex 2 nm thick against a nucleosome's 11 nm, its minor groove
+  turned in to the core every ten base pairs or so (Luger et al. 1997).
+  *Consequence:* the DNA is a body with its grooves from the chromatin down,
+  its backbones ridges over it, never two loose strands.
 
 Sources:
 
@@ -1213,6 +1235,8 @@ Sources:
   human genome. Cell 2008;132:887–898.
 - Schröck E et al. Multicolor spectral karyotyping of human chromosomes.
   Science 1996;273:494–497.
+- Schwartz S, Meshorer E, Ast G. Chromatin organization marks exon-intron
+  structure. Nat Struct Mol Biol 2009;16:990–995.
 - Shanely RA et al. Human skeletal muscle biopsy procedures using the
   modified Bergström technique. J Vis Exp 2014;91:51812.
 - Shemilt LA et al. Scanning electron microscope studies of human
@@ -1257,6 +1281,8 @@ Sources:
 - Thuy TTH et al. The Main Blood Supply for The Nipple-Areola Complex of
   Breast Hypertrophy Evaluated by Multi-Slice Computed Tomography. Med Arch
   2025;79:267–270.
+- Tilgner H et al. Nucleosome positioning as a determinant of exon
+  recognition. Nat Struct Mol Biol 2009;16:996–1001.
 - Trask BJ. Fluorescence in situ hybridization: applications in
   cytogenetics and gene mapping. Trends Genet 1991;7:149–154.
 - Triantafyllou G et al. Surgical anatomy of the cystic artery: A
@@ -1334,7 +1360,8 @@ Sources:
   what it makes, at every scale: the organs its RNA is raised in (brighter
   where the level is higher), where its cell lives in the organ, its cell
   in the tissue, where its protein sits in the cell, its chromosome's
-  territory, its band, and its gene on the map.
+  territory, its band, its gene on the map and its exons, on the gene's
+  stop and along its DNA.
   Nothing else is in it.
 - **Everything else is sculpted** in the app's warm neutrals, under one
   light from the upper left (`Sculpt`): a lit body from the surfaces up
@@ -1352,9 +1379,13 @@ Sources:
   own colours, so it darkens and lightens in its own hue. Its arms are as
   quiet as the organs (a chroma of about 5), and nothing on it is more
   than half as saturated as the accent but its band's lit side.
-- **Data keeps its colours.** The gene's parts are the walk's role colours,
-  the bases the home helix's (`NucleotideColors.helix`), and blood the
-  thymine red, the one red the app has.
+- **Data keeps its colours.** The bases are the home helix's
+  (`NucleotideColors.helix`), and blood the thymine red, the one red the
+  app has. The gene's exons are the accent in two strengths (the user's
+  choice of 2026-11-18, over the walk's role colours, whose blue and tan
+  sat beside the helix's denim and honey): their coding parts the accent,
+  their untranslated ends the organs' home tone, their bands behind the
+  chromatin the ground mixed a third and a fifth of the way to it.
 - **Glows** are gradients and wide faint strokes, never a blur.
 - **Names.** One plate a name, with a line to what it names, set clear of
   each other and 8 pt in from the edges. The card says the rest. The
@@ -1387,7 +1418,14 @@ Every colour comes from `ZoomInks`, built from the theme:
 | `shadow` | the ground three quarters of the way to black | shadows under forms |
 | `blood` | the walk's thymine | red cells |
 | `bases` | `NucleotideColors.helix` | the helix's bases, and a nerve in its guanine's honey (`nerve`) |
-| `cds`, `utr`, `intron` | `AnatomyColors`' roles | the gene's parts |
+| `home` | the accent at 0.42 over `lit(0.2)` | the gene's untranslated parts; every organ's home |
+
+The gene's DNA and its bands are mixed in `GeneStrand` from these: `ink`
+(an exon's coding part the accent, its untranslated ends `home`, the rest
+the ground three quarters of the way to `label`), `band` (the ground a
+third or a fifth of the way to `home`) and `ridge` (a stretch's colour 0.3
+of the way to `text`). A nucleosome's core is the chromosome's stone
+(`ChromosomeColors.zoom.body`).
 
 `zoom_inks_test` holds that no colour in `lib/features/zoom/` is written as
 a number, and that every ink is the theme's own or a mix of its own.
@@ -3528,52 +3566,85 @@ dystrophin to 3.8 for oxytocin.
   so the map goes while the mark opens past a few tens of pixels, as it
   did there.
 - The gene's ruler, start, 3′ end and exons' numbers come up over the last
-  45% of the step, as the map goes; an exon's number as its block grows
+  45% of the step, as the map goes; an exon's number as its band grows
   from half its size at the stop to its size there.
 
-**Gene.** As a genome browser draws a transcript, and still: nothing reads
-it, as nothing reads the helix at the DNA (the user's choice of
-2026-10-15; until 2026-10-14 a polymerase passed along it every 9 s, its
-transcript trailing in the accent).
-- The record's exons and introns are at their real lengths (`GeneLayout`
-  uses `realIntronBp` for the three genes whose record shortens its
-  introns), placed along the span MANE gives, in a view 1.3 times as wide.
-- Exons are lit, rounded blocks in the walk's role colours: coding exons
-  tall, and numbered where they are 16 px wide at the stop, their
-  untranslated ends short. Introns are a lit hairline with chevrons the way
-  the gene is read.
-- A name, its line in the accent, marks where transcription starts (no bent
-  arrow beside it: the user found the two heavy, 2026-10-16), and a ruler
-  counts from the 5′ end.
+**Gene.** A stretch of chromatin, still: nothing reads it, as nothing
+reads the helix at the DNA (the user's choice of 2026-10-16, after a still
+of it being read, and a micrograph of it being read, both read as an
+animation laid out in space).
+- Its DNA is a line beaded with its nucleosomes, each its DNA wound round a
+  core (`ChromatinFibre`, `ChromatinBeads`), drawn larger than life (a core
+  at least 6 px across from its middle, beads at least 32 px apart, every
+  other or every fourth where they would crowd), going on either side of
+  the gene (the user's choice of 2026-10-16: "Wound, bigger").
+- Its exons are a genome browser's glyph, as quiet bands behind the
+  chromatin (`GeneStrand.bands`, the user's choice of 2026-11-18): coding
+  parts 10 px either side of the line, so a core sits inside one, and
+  untranslated ends 5 px, square where two parts of an exon meet and round
+  at its ends, at their real lengths (`GeneLayout` uses `realIntronBp` for
+  the genes whose record shortens its introns), along the span MANE gives,
+  in a view 1.3 times as wide. They are flat: the cores are the lit forms.
+  Until 2026-11-18 they were lit blocks in the walk's blue and tan drawn
+  over the chromatin, which hid the nucleosomes under them.
+- The DNA along an exon wears it: coding parts in the accent, untranslated
+  ends in the organs' home tone, and so does a nucleosome's wound DNA on an
+  exon. Where a core is drawn larger than life its DNA stands for far more
+  base pairs than it holds (some 140 kb on dystrophin), and each stretch of
+  it takes the colour most of it is, so no stray exon lights it.
+- Coding exons are numbered where they are 16 px wide at the stop. A name,
+  its line in the accent, marks where transcription starts (no bent arrow:
+  the user found the two heavy, 2026-10-16); quiet names in a row under the
+  line say what the rest is (`GeneNames`: the widest coding part "exon", the
+  widest untranslated part 6 px wide or more "UTR", the longest intron
+  "intron", the first core clear of the exons "nucleosome"; the user's ask
+  of 2026-10-16); "3′" stands over the gene's far end, and a ruler counts
+  from the 5′ end.
 - The card names the gene and its length, its exons and its strand:
   `INS · 1,431 bases`, `Three exons · reverse strand`.
 
 **DNA.** The card says the first bases its helix carries, over them, 5′ to
-3′: `First 33 bases`.
+3′: `First 33 bases`. The dive to it is one DNA all the way (`DnaScene`, the
+user's choice of 2026-10-15), seen closer and closer, every stage keyed to
+the view's width, and spent by `DnaDive` (see "Smooth motion").
 - On the way in from the gene, the view closes in on its 5′ end. The
-  gene's ruler, numbers, start and 3′ end go over the first 45% of the
-  step. Its exons and introns give way by the view's width and are gone by
-  400 bp, before the helix comes up: over a tenfold narrowing (4 kb to
-  400 bp), as on the dive from the band, or over 0.45 of the step where
-  that is more. A deep step crosses a decade too fast for a fade at 60 fps:
-  dystrophin's is 5.3 decades, so its exons give way from about 100 kb. A
-  short gene's give way from its own stop. The gene's stop draws them all
-  the way and the DNA's never does, so the two never draw them at once.
-- Past a few thousand base pairs, the gene's line is a fibre of
-  nucleosomes: a core of 147 bp seen side on, its DNA passing behind and in
-  front of it, one every 200 bp. The first sits 40 bp into the gene and the
-  stretch before it is bare.
-- Beads come up once they read as beads and give way before one fills the
-  view. The fibre's line comes up with them and as the gene's exons, which
-  lie over it, give way.
-- Under 420 bp across the view, the bare 5′ end resolves into the home
-  screen's own double helix, drawn by its own painter (`DnaHelixPainter`, in
-  `lib/shared/helix/`): lying along the gene with its 5′ end at the left,
-  14 base pairs across the view, carrying the record's first 33 bases in
-  the bases' colours, its backbone in the quiet ink, running off the canvas
-  on its 3′ side. It turns once in 24 s. Unlike the home screen's, nothing
-  transcribes it: no bubble opens and no strand peels away, so every base
-  stays paired (the user's choice of 2026-10-14).
+  gene's ruler, numbers, names and 3′ end go first. The exons' bands sink
+  behind the DNA to nothing by where it starts to wind (2.5 kb, or 0.6 of
+  the gene's view where that is less); the DNA keeps their colours.
+- Beads come up between the ones the stop shows once they stand 32 px
+  apart, growing out of the line as they fade in, and the fibre packs: each
+  nucleosome draws in the DNA it winds until it takes only its own length
+  along the fibre. The first is named.
+- The DNA is a lit tube all the way. From 900 to 350 bp across, its grooves
+  come up over it: its two backbones as ridges 1.4 px wide where they face
+  the reader, the far halves hidden by the body, so a nucleosome's DNA is a
+  grooved rope round its core (`DnaGrooves`; the user's choice of
+  2026-11-18: until then the DNA became two loose strands, every core a tin
+  can in a scribble). The ridges are the helix's own backbones: at base
+  pair *b* from the 5′ end, backbone A lies R cos φ · 12/(12 + sin φ) from
+  the axis, φ = 2π((*b* − 33)/10.5 + turn), B a minor groove (127°) on,
+  facing the reader where sin φ < 0, as the painter lays its model 3′ first
+  and turns its page a quarter. They turn with the helix, so the DNA is
+  drawn on the ambient clock once they show, and still before (the gene's
+  stop needs no clock). A core is the chromosome's stone.
+- From 320 to 125 bp the skin over the record's first 33 bases clears: the
+  home screen's own double helix, drawn by its own painter
+  (`DnaHelixPainter`, in `lib/shared/helix/`), is under it, its backbones
+  where the ridges were, which thin away under them; past the 33rd base the
+  skin closes up again over 3 bp and the DNA goes on as a rope into the
+  first nucleosome, which slides off to the right. The helix's backbones
+  take the colour of the stretch its bases lie in (exon 1's untranslated
+  start, for nearly every gene) and ease to the quiet ink as its bases come
+  up, from 220 to 40 bp, in their own colours. The clearing ends before the
+  helix's 3′ end reaches the canvas's last 28% (121 bp across), and its 3′
+  side fades into the ground only once it runs off the canvas.
+- At the stop it lies along the gene with its 5′ end at the left, 14 base
+  pairs across the view, carrying the record's first 33 bases, each
+  lettered in its ball, its backbone in the quiet ink, running off the
+  canvas on its 3′ side; nothing else of the DNA is drawn. It turns once in
+  24 s. Unlike the home screen's, nothing transcribes it: no bubble opens
+  and no strand peels away, so every base stays paired (the user's choice
+  of 2026-10-14).
 - "Walk ›" unzips it into the walk's rows (`HelixModel(unzip:)`) over
   450 ms before the walk opens, its turn easing to flat by the shortest way.
 
@@ -3584,11 +3655,24 @@ speed it has to the stop, arriving with no speed and no change of speed.
 It takes 1.3 s plus 0.15 s a decade, held between 1.45 and 1.9 s: the
 shortest steps need 1.4 s to keep every fade under 0.08 a frame at 60 fps,
 and a long chromosome's turn into its band about 1.6. The step from the band
-to the gene crosses 0.7 to 3.8 decades (1.45 to 1.87 s), and the step from
-the gene to the DNA 1.9 to 5.3 (1.59 to 1.9 s). A step asked for
+to the gene crosses 0.7 to 3.8 decades (1.45 to 1.87 s). A step asked for
 mid-flight starts the next flight at the speed the depth has, so it carries
 straight on. A flick coasts 0.35 s at its own speed to choose its stop, and
 a critically damped spring (stiffness 140) takes it there.
+
+**The dive.** The step from the gene to the DNA crosses 1.9 to 5.3
+decades and takes 4 s (`ZoomDepth.diveSeconds`; 2.7, then 8, then 4 at the
+user's word of 2026-10-16), half of it at one speed. Six things happen in
+it at their own widths: the exons' bands sink, the nucleosomes wind in the
+DNA between them and are named, the DNA's grooves come up (900 to 350 bp),
+its skin clears onto the helix (320 to 125 bp), and the helix's bases come
+up (220 to 40 bp). `DnaDive` spends the step's depth by what happens in
+each decade: a decade of empty introns weighs 0.15, and the weight rises by
+1.85 under 40 kb, by 2.5 under 2.8 kb and by 3.0 under 900 bp, and falls by
+6.0 under 100 bp, each change over a few tenths of a decade, so that on
+every gene's step, either way at 60 fps, each of the six gets more than
+half a second (the bands' sinking 0.45 s). Insulin's step reaches 900 bp at
+about 1 s, 320 bp at 2, 125 bp at 2.9 and 40 bp at 3.3.
 
 **Two layers.** The scenes are drawn again only when the depth moves. What
 moves at rest (a beat, a helix turning, vesicles leaving a cell) is drawn
@@ -3620,10 +3704,11 @@ folds, which once fell in the last frame of the step to the organ.
 - As the step leaves the band, the gene lies on its mark on the strip, its
   5′ end at the mark's left and its 3′ end at its right, to half a pixel,
   for all twenty. Across the step to the DNA, the gene's 5′ end and the
-  DNA's are one, to half a pixel. The exons show whole at the gene and on
-  the way in, and are gone once the view is 400 bp wide; nothing the gene
-  draws changes by more than 0.08 a frame at 60 fps, on any step to it or
-  from it.
+  DNA's are one, to half a pixel. The exons' bands show whole at the gene
+  and are gone where the DNA starts to wind, before the helix's bases;
+  nothing the gene or its DNA draws (the bands, the packing, the grooves,
+  the clearing, the bases, their letters) changes by more than 0.08 a frame
+  at 60 fps, on any step to it or from it.
 - The scale bar reads its round length at every stop, and no frame of any
   step at 60 fps changes its length by 2 px or more.
 
@@ -3896,7 +3981,12 @@ frame, lighting it as the organs are lit wherever it narrows (0.5 to
   condensed although the cell is not dividing: the territory condenses into
   it. Nothing on screen says so.
 - **Textbook packing.** Nucleosomes are drawn every 200 bp from 40 bp into
-  the gene, not where they sit on this gene.
+  the gene, not where they sit on this gene; exons, which hold a little
+  more of them across the genome, get none of their own.
+- **Grooves that turn.** The DNA's grooves turn with the helix from where
+  they come up, along the linkers and round the cores too: DNA wound on a
+  core does not spin, but grooves standing still there would meet the
+  turning helix out of step at its 3′ end.
 - **One body.** A gene of tissues both sexes have is shown the female
   figure, unless more of its tissues are the male's alone.
 - **A micrograph's form in colours of its own.** A scanning micrograph
@@ -4132,7 +4222,24 @@ frame, lighting it as the organs are lit wherever it narrows (0.5 to
   `lib/shared/helix/`, whose `topFade`, `bottomFade` and `overscan` default
   to the home screen's, and whose `transcription` the zoom leaves null, for
   a helix nothing reads; `helix_vertices_test` pins every call the home
-  screen's helix makes.
+  screen's helix makes. The zoom passes it a backbone colour of its own
+  only on the way in; nothing in the painter changed for the grooves.
+- The gene and its DNA: `presentation/scenes/gene_strand.dart` (the exons'
+  bands and the gene's inks), `chromatin_fibre.dart` (the DNA as a lit tube,
+  its nucleosomes, and `DnaGrooves`, its ridges and the skin over the
+  helix's bases), `nucleosome_art.dart` (a core in the chromosome's stone),
+  `chromatin_beads.dart`, `gene_scene.dart`, `dna_scene.dart`, and
+  `domain/chromatin_layout.dart`, `domain/dna_dive.dart`.
+  - `gene_bands_test`: the gene's inks, and every band drawn before the
+    first core, on the step to the gene and at its stop.
+  - `dna_grooves_test`: the painter's backbones lie where `DnaGrooves`
+    puts them, to 0.3 px, at three widths and three clocks, for insulin,
+    oxytocin and lactalbumin; the ridges lie on them, only where they face
+    the reader; the DNA is drawn still while no grooves show and on the
+    ambient clock once they do; the skin clears left of the helix's fade;
+    at the DNA's stop nothing but the helix is drawn.
+  - `gene_dna_test`: the stop one picture from either side (8 levels), the
+    5′ ends one, every stage of the dive its time on every gene's step.
 - Built proteins in the tests:
   - `test/features/zoom/fixtures/coverage/` holds twelve built proteins:
     - B2M (chromosome 15) and MC4R (18);
