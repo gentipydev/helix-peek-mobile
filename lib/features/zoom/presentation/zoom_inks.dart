@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/anatomy_colors.dart';
 import '../../../core/theme/nucleotide_colors.dart';
 
 /// Every colour the zoom draws with, and all of them the app's own: the
-/// ground and surfaces every screen is on, its two inks, its accent, the
-/// walk's gene-part colours and the home helix's bases. Nothing here is a
-/// colour of its own; the zoom's tones are the app's, mixed.
+/// ground and surfaces every screen is on, its two inks, its accent and the
+/// home helix's bases. Nothing here is a colour of its own; the zoom's tones
+/// are the app's, mixed.
 ///
 /// The zoom draws in two voices:
 /// - **The mark**, the app's accent, is the gene and what it makes, at every
 ///   scale: the organs its RNA is raised in, its cell, where its protein
-///   sits, its chromosome, its band, its gene, its RNA. Nothing else is
+///   sits, its chromosome, its band, its gene and its exons. Nothing else is
 ///   teal.
 /// - **Form**, everything else, is sculpted in the app's warm neutrals: the
 ///   surfaces for what is in shade, [lit] (the outline lifted toward the
 ///   ink) for what the light falls on, and the quiet ink for fine line work.
 ///
-/// Data keeps its own colours where it has them: the gene's parts are the
-/// walk's, the bases the home helix's, blood the thymine red.
+/// Data keeps its own colours where it has them: the bases the home
+/// helix's, blood the thymine red. The gene's exons are the mark's, in two
+/// strengths, as the gene is at every other stop (the user's choice of
+/// 2026-11-18, over the walk's blue and tan, which sat beside the helix's
+/// denim and honey).
 ///
 /// Two forms have colours of their own: a chromosome, in colours from the
 /// theme (`ChromosomeColors`): its arms a soft blue in the inks' hue, its
@@ -41,14 +43,10 @@ final class ZoomInks {
     required this.shadow,
     required this.blood,
     required this.bases,
-    required this.cds,
-    required this.utr,
-    required this.intron,
   });
 
   factory ZoomInks.of(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final AnatomyColors anatomy = context.anatomyColors;
     return ZoomInks(
       ground: scheme.surface,
       raised: scheme.surfaceContainerLow,
@@ -67,9 +65,6 @@ final class ZoomInks {
       // The helix is a drawing of one, as the home screen's is, in the
       // home helix's own bases (`AppTheme.home`).
       bases: NucleotideColors.helix,
-      cds: anatomy.roleCds,
-      utr: anatomy.roleUtr5,
-      intron: anatomy.roleIntron,
     );
   }
 
@@ -98,11 +93,6 @@ final class ZoomInks {
   /// A nerve, in the home helix's honey.
   Color get nerve => bases.guanine;
 
-  /// The gene's parts, in the walk's own colours.
-  final Color cds;
-  final Color utr;
-  final Color intron;
-
   /// Light falling on a form: the outline lifted [t] of the way toward the
   /// bright ink. Half way is as light as a form is drawn.
   Color lit(double t) => Color.lerp(outline, text, t)!;
@@ -119,6 +109,12 @@ final class ZoomInks {
   /// The mark at [alpha].
   Color glow(double alpha) => mark.withValues(alpha: alpha.clamp(0.0, 1.0));
 
+  /// The organs' home tone: the mark at 0.42 over a form in the light at
+  /// 0.2, the tone every organ draws the part its cell lives in, and the
+  /// chromosome its gene's band. A region of the gene, quieter than the
+  /// mark itself.
+  Color get home => Color.alphaBlend(glow(0.42), lit(0.2));
+
   @override
   bool operator ==(Object other) =>
       other is ZoomInks &&
@@ -133,10 +129,7 @@ final class ZoomInks {
       other.markDeep == markDeep &&
       other.shadow == shadow &&
       other.blood == blood &&
-      other.bases == bases &&
-      other.cds == cds &&
-      other.utr == utr &&
-      other.intron == intron;
+      other.bases == bases;
 
   @override
   int get hashCode => Object.hash(
@@ -152,8 +145,5 @@ final class ZoomInks {
     shadow,
     blood,
     bases,
-    cds,
-    utr,
-    intron,
   );
 }

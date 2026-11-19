@@ -10,6 +10,7 @@ import 'package:helixpeek/core/theme/app_theme.dart';
 import 'package:helixpeek/core/theme/app_typography.dart';
 import 'package:helixpeek/features/zoom/domain/cell_archetypes.dart';
 import 'package:helixpeek/features/zoom/domain/cell_parts.dart';
+import 'package:helixpeek/features/zoom/domain/dna_dive.dart';
 import 'package:helixpeek/features/zoom/domain/locus_track.dart';
 import 'package:helixpeek/features/zoom/domain/zoom_depth.dart';
 import 'package:helixpeek/features/zoom/domain/zoom_motion.dart';
@@ -539,8 +540,9 @@ void main() {
     }
   });
 
-  testWidgets('the gene’s exons show whole at its stop, sink into its DNA on '
-      'the way in, and are gone before the helix’s bases come up', (
+  testWidgets('the bands behind the gene’s exons show whole at its stop, sink '
+      'behind its DNA on the way in, and are gone before the helix’s bases '
+      'come up', (
     WidgetTester tester,
   ) async {
     final ZoomInks inks = await _inks(tester);
@@ -563,16 +565,20 @@ void main() {
       final double gene = depth.depthOf(ZoomStop.gene);
       final double end = depth.depthOf(ZoomStop.dna);
       // From the gene's stop on, the DNA's scene draws the gene's DNA, its
-      // exons whole there.
+      // exons' bands whole there.
       final (DnaScene atStop, ZoomFrame stopFrame) = dna(gene)!;
       expect(atStop.exonsShown(stopFrame), 1, reason: t.slug);
       expect(stopFrame.opacity, 1, reason: t.slug);
-      // Where the view is as narrow as the exons last to: gone.
+      // Where the DNA starts to wind, they have sunk behind it: gone.
       final (DnaScene gone, ZoomFrame goneFrame) = dna(
-        _depthWhere(depth, DnaScene.exonsGone) + 1e-9,
+        _depthWhere(
+              depth,
+              DnaDive.windsFrom(depth.widthOf(ZoomStop.gene)),
+            ) +
+            1e-9,
       )!;
       expect(gone.exonsShown(goneFrame), lessThan(1e-6), reason: t.slug);
-      // Never the exons' colours and the bases at once.
+      // Never the bands and the bases at once.
       for (int i = 0; i <= 400; i++) {
         final (DnaScene scene, ZoomFrame frame) = dna(
           gene + (end - gene) * i / 400,

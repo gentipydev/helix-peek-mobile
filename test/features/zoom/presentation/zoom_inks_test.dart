@@ -2,15 +2,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:helixpeek/core/theme/anatomy_colors.dart';
 import 'package:helixpeek/core/theme/app_theme.dart';
 import 'package:helixpeek/core/theme/nucleotide_colors.dart';
 import 'package:helixpeek/features/zoom/presentation/zoom_inks.dart';
 
 /// The zoom draws in the app's colours and no others: its ground and
-/// surfaces, its two inks and its accent, the walk's gene-part colours and
-/// the home helix's bases, mixed. A colour of its own would be the zoom
-/// drifting from the rest of the app, which is what its palette was.
+/// surfaces, its two inks, its accent and the home helix's bases, mixed. A
+/// colour of its own would be the zoom drifting from the rest of the app,
+/// which is what its palette was.
 void main() {
   test('no colour in the zoom is written out as a number', () {
     final RegExp hex = RegExp(r'Color\(\s*0x');
@@ -99,10 +98,15 @@ void main() {
     // A nerve in the helix's honey.
     final NucleotideColors helix = AppTheme.home.extension<NucleotideColors>()!;
     expect(inks.nerve, helix.guanine);
-    final AnatomyColors anatomy = theme.extension<AnatomyColors>()!;
-    expect(inks.cds, anatomy.roleCds);
-    expect(inks.utr, anatomy.roleUtr5);
-    expect(inks.intron, anatomy.roleIntron);
+    // The organs' home tone, the mark at 0.42 over a lit form: the gene's
+    // untranslated parts, a region of the gene quieter than the mark.
+    expect(
+      inks.home,
+      Color.alphaBlend(
+        scheme.primary.withValues(alpha: 0.42),
+        Color.lerp(scheme.outline, scheme.onSurface, 0.2)!,
+      ),
+    );
     expect(inks.blood, theme.extension<NucleotideColors>()!.thymine);
     // Its tones run between the app's own.
     expect(inks.lit(0), scheme.outline);

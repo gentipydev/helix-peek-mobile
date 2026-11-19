@@ -71,6 +71,7 @@ abstract final class ChromatinFibre {
     final double scale = m * perBase;
     final double reach = ChromatinLayout.reach * m;
     final double origin = x(0);
+    final List<double> sorted = <double>[...marks]..sort();
     double alongOf(double screenX) => (screenX - origin) / perBase;
     final double lineFrom = _layout.offsetAt(alongOf(-thick - 8), packed);
     final double lineTo = _layout.offsetAt(alongOf(width + thick + 8), packed);
@@ -199,6 +200,7 @@ abstract final class ChromatinFibre {
           thick: thick,
           twist: twist,
           colourAt: colourAt,
+          marks: sorted,
         );
       }
       if (fading) {
@@ -221,6 +223,7 @@ abstract final class ChromatinFibre {
     required double thick,
     required double twist,
     required Color Function(double offset) colourAt,
+    required List<double> marks,
   }) {
     final _Strokes behind = _Strokes();
     final _Strokes inFront = _Strokes();
@@ -238,7 +241,7 @@ abstract final class ChromatinFibre {
       final FibrePoint p = ChromatinLayout.coilAt(u);
       final double a = from + (to - from) * i / samples;
       final double b = from + (to - from) * u;
-      final Color colour = colourAt((a + b) / 2);
+      final Color colour = _majority(a, b, marks, colourAt);
       if (colour.a > 0.002) {
         final FibrePoint half = ChromatinLayout.coilAt((i + 0.5) / samples);
         (half.depth < 0 ? behind : inFront).add(
@@ -266,6 +269,55 @@ abstract final class ChromatinFibre {
   /// How long a nucleosome's DNA is from where it leaves the line to where
   /// it comes back, in base pairs' lengths, near enough.
   static const double _length = 160;
+
+  /// The colour most of the DNA from [from] to [to] is drawn in, its colour
+  /// changing only at [marks] (in order): a stretch of a nucleosome's DNA
+  /// drawn far larger than life stands for thousands of base pairs, and
+  /// the colour at its middle alone would light a stray exon there, a
+  /// different one each frame as the gene opens out.
+  static Color _majority(
+    double from,
+    double to,
+    List<double> marks,
+    Color Function(double offset) colourAt,
+  ) {
+    final double a = math.min(from, to);
+    final double b = math.max(from, to);
+    // The first mark past a.
+    int low = 0;
+    int high = marks.length;
+    while (low < high) {
+      final int middle = (low + high) >> 1;
+      if (marks[middle] <= a) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    if (low >= marks.length || marks[low] >= b) {
+      return colourAt((a + b) / 2);
+    }
+    final Map<int, double> lengths = <int, double>{};
+    final Map<int, Color> colours = <int, Color>{};
+    double start = a;
+    for (int i = low; start < b; i++) {
+      final double stop = i < marks.length && marks[i] < b ? marks[i] : b;
+      if (stop > start) {
+        final Color colour = colourAt((start + stop) / 2);
+        final int key = colour.toARGB32();
+        colours[key] = colour;
+        lengths[key] = (lengths[key] ?? 0) + stop - start;
+      }
+      start = stop;
+    }
+    int best = lengths.keys.first;
+    for (final MapEntry<int, double> entry in lengths.entries) {
+      if (entry.value > lengths[best]!) {
+        best = entry.key;
+      }
+    }
+    return colours[best]!;
+  }
 }
 
 /// The DNA's strokes by colour, laid as it runs: a run of one colour is one

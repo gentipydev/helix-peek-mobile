@@ -19,9 +19,12 @@ import 'zoom_subject.dart';
 /// The gene as a stretch of chromatin, still: its DNA a line beaded with its
 /// nucleosomes, each its DNA wound round a histone core, larger than life
 /// ([ChromatinFibre]; the user's choice of 2026-10-16, to see them), going
-/// on either side of it, and its exons, as a genome browser draws a transcript, lit blocks in the walk's
-/// own colours, coding parts tall and untranslated ends short, every part
-/// at its real length along the span MANE gives it; a ruler from its 5′ end
+/// on either side of it, and its exons as a genome browser draws a
+/// transcript, a quiet band behind the chromatin for each, coding parts tall
+/// and untranslated ends short, the DNA along them in the mark's two
+/// strengths ([GeneStrand]; the user's choice of 2026-11-18: the bands never
+/// cover a nucleosome), every part at its real length along the span MANE
+/// gives it; a ruler from its 5′ end
 /// and a name where transcription starts (the user's choice of
 /// 2026-10-16: a snapshot of the gene, nothing reading it, after a still of
 /// it being read that read as an animation laid out in space; its bent
@@ -231,8 +234,9 @@ final class GeneScene extends ZoomScene {
   }
 
   /// The gene's DNA, as the DNA's scene draws it from the gene's stop on
-  /// ([ChromatinFibre]): its line, the DNA either side of it and its
-  /// nucleosomes [around] of the way up, and its exons over them.
+  /// ([ChromatinFibre]): its exons' bands, and over them its line, the DNA
+  /// either side of it and its nucleosomes [around] of the way up, the DNA
+  /// along its exons in their colours.
   void _strand(Canvas canvas, ZoomFrame frame, double mid, double around) {
     final ZoomInks inks = frame.inks;
     final double w = frame.size.width;
@@ -240,6 +244,14 @@ final class GeneScene extends ZoomScene {
     final double scale = subject.track.geneLengthBp / subject.layout.length;
     double x(double offset) => _x(frame, offset / scale);
     final double end = subject.track.geneLengthBp.toDouble();
+    GeneStrand.bands(
+      canvas,
+      inks,
+      subject.layout,
+      x: (double offset) => _x(frame, offset),
+      mid: mid,
+      width: w,
+    );
     // The nucleosomes its stop shows, coming up with it: which they are
     // does not change as the gene opens out, and they grow with it, never
     // larger than the room between them.
@@ -260,7 +272,6 @@ final class GeneScene extends ZoomScene {
         final Color ink = GeneStrand.ink(
           inks,
           subject.layout.kindAt(offset / scale),
-          0,
         );
         return offset < 0 || offset > end
             ? ink.withValues(alpha: ink.a * around)
@@ -269,14 +280,6 @@ final class GeneScene extends ZoomScene {
       depth: depth,
       shownOf: (int index) =>
           ChromatinBeads.depthOf(index) >= depth ? around : 0,
-    );
-    GeneStrand.paint(
-      canvas,
-      inks,
-      subject.layout,
-      x: (double offset) => _x(frame, offset),
-      mid: mid,
-      width: w,
     );
   }
 

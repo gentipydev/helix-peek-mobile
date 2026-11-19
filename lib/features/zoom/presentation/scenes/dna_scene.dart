@@ -26,11 +26,11 @@ import 'zoom_subject.dart';
 ///
 /// It reads 5′ to 3′, left to right, whatever the gene's strand, as the
 /// gene's stop does, and from that stop on it is this scene's: it draws the
-/// gene's line and exons as the gene's scene did a frame before
+/// gene's exons' bands and its DNA as the gene's scene did a frame before
 /// ([GeneStrand]), so nothing changes at the stop. Then, as the view closes
 /// in on the gene's 5′ end:
-/// - the exons sink into the DNA, each a stretch of it in its colour, and
-///   the DNA either side of the gene comes up;
+/// - the exons' bands sink behind the DNA, which keeps their colours along
+///   them;
 /// - its nucleosomes, each a histone core with its DNA wound round it, as
 ///   the gene's stop draws them ([ChromatinFibre]), come up between the
 ///   ones the stop shows, grow from larger than life to their own size,
@@ -80,27 +80,20 @@ final class DnaScene extends ZoomScene {
   /// wind in the DNA between them, before the fibre is packed.
   static const double windsOver = 4;
 
-  /// How wide the view is, in base pairs, when the gene's exons are gone
-  /// from its DNA: the bases come up below it.
-  static const double exonsGone = 230;
-
   // Every stage of the way is keyed to how wide the view is: a function of
   // the depth, however the step spends it.
   double get _gene => subject.depth.widthOf(ZoomStop.gene);
   double get _winds => DnaDive.windsFrom(_gene);
   double get _sinks => math.min(_gene, 10 * _winds);
 
-  /// How far the exons have sunk into the DNA, where the view is [span]
-  /// base pairs wide: from the gene's stop, or a decade above where the DNA
-  /// winds, to where it does.
+  /// How far the exons' bands have sunk behind the DNA, where the view is
+  /// [span] base pairs wide: from the gene's stop, or a decade above where
+  /// the DNA winds, to where it does.
   double sunkAt(double span) => _between(span, _sinks, _winds);
 
   /// How far the fibre is packed: the nucleosomes winding in the DNA
   /// between them ([ChromatinLayout]).
   double packedAt(double span) => _between(span, _winds, _winds / windsOver);
-
-  /// How much of the exons' colours the DNA still wears.
-  static double tintAt(double span) => 1 - _fall(span, 500, exonsGone);
 
   /// How much of the DNA either side of the gene shows: all of it from the
   /// gene's stop, where the gene is a stretch of chromatin, and none once
@@ -139,10 +132,11 @@ final class DnaScene extends ZoomScene {
     return smoothstep(math.log(from / span) / math.log(from / to));
   }
 
-  /// How much of the gene's exons show on its DNA at [frame]: whole at the
-  /// gene's stop, gone by [exonsGone].
+  /// How much of the bands behind the gene's exons show at [frame]: whole
+  /// at the gene's stop, sunk to nothing where the DNA starts to wind. The
+  /// DNA along the exons keeps their colours on past it.
   @visibleForTesting
-  double exonsShown(ZoomFrame frame) => tintAt(_span(frame));
+  double exonsShown(ZoomFrame frame) => 1 - sunkAt(_span(frame));
 
   /// How far the fibre is packed at [frame].
   @visibleForTesting
@@ -332,7 +326,7 @@ final class DnaScene extends ZoomScene {
     final double perBase = w / span;
     final double sunk = sunkAt(span);
     // The line the gene's stop draws, thickening to the DNA's own width as
-    // the exons sink into it.
+    // the exons' bands sink behind it.
     final double thick =
         GeneStrand.line +
         math.max(0, thickness * perBase - GeneStrand.line) * sunk;
@@ -341,11 +335,19 @@ final class DnaScene extends ZoomScene {
     final double scale = _scale;
     final double end = layout.length * scale;
     final double around = contextAt(span);
-    // The exons' colours, taken on as they sink and given up before the
-    // bases come.
-    final double tint = sunk * tintAt(span);
     final double helix = helixAt(span);
     final int bare = subject.dnaBases;
+    if (sunk < 1) {
+      GeneStrand.bands(
+        canvas,
+        inks,
+        layout,
+        x: (double offset) => screenX(frame, offset),
+        mid: mid,
+        width: w,
+        sink: sunk,
+      );
+    }
     ChromatinFibre.paint(
       canvas,
       inks,
@@ -359,14 +361,10 @@ final class DnaScene extends ZoomScene {
       // twist too: two strands round its grooves, as the helix's own are.
       twist: helix,
       marks: <double>[...subject.fibreMarks, bare.toDouble()],
-      // The gene's, its exons tinted as they fade; the DNA either side of it
-      // as it comes and goes; the bare start giving way to the helix.
+      // The gene's, along its exons in their colours; the DNA either side of
+      // it as it comes and goes; the bare start giving way to the helix.
       colourAt: (double offset) {
-        final Color ink = GeneStrand.ink(
-          inks,
-          layout.kindAt(offset / scale),
-          tint,
-        );
+        final Color ink = GeneStrand.ink(inks, layout.kindAt(offset / scale));
         double alpha = 1;
         if (offset < 0 || offset > end) {
           alpha = around;
@@ -387,18 +385,6 @@ final class DnaScene extends ZoomScene {
             (place < 0 || place > end ? around : 1);
       },
     );
-    if (sunk < 1) {
-      GeneStrand.paint(
-        canvas,
-        inks,
-        layout,
-        x: (double offset) => screenX(frame, offset),
-        mid: mid,
-        width: w,
-        sink: sunk,
-        thick: thick,
-      );
-    }
   }
 
   @override
