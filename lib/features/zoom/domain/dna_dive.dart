@@ -6,14 +6,16 @@ import 'package:flutter/foundation.dart';
 ///
 /// Every other step narrows the view by the same factor for each equal step
 /// of depth. This one crosses up to five decades, from a whole gene to 14
-/// base pairs, and five things happen in it at their own scales: a long
-/// gene's empty introns go by; its exons sink into its DNA; its nucleosomes
-/// wind in the DNA between them and are named; and the bare start opens
-/// into the helix. Narrowed evenly, the beads passed in a quarter of a
-/// second at the step's fastest. So the step weighs each decade by what
-/// happens in it, and spends its depth in proportion: a decade of empty gene
-/// weighs a quarter of one where the exons sink, and a decade where the
-/// nucleosomes wind in their DNA and are named three and a half.
+/// base pairs, and six things happen in it at their own scales: a long
+/// gene's empty introns go by; its exons' bands sink behind its DNA; its
+/// nucleosomes wind in the DNA between them and are named; the DNA's
+/// grooves come up; its skin over the first bases clears onto the helix;
+/// and the helix's bases come up. Narrowed evenly, the beads passed in a
+/// quarter of a second at the step's fastest. So the step weighs each
+/// decade by what happens in it, and spends its depth in proportion: a
+/// decade of empty gene weighs less than a tenth of one where the
+/// nucleosomes wind in their DNA, and the decades where the grooves come up
+/// and the skin clears weigh most of all.
 ///
 /// Widths are in base pairs, read as their common logarithm; [narrowedAt]
 /// is the share of the step's decades narrowed at a share of its depth.
@@ -43,16 +45,18 @@ final class DnaDive {
 
   /// Where the weight changes, as the view narrows past each width (base
   /// pairs), over how many decades, and by how much: up to a decade's worth
-  /// where the exons sink into the DNA, below about 40 kb; up where the
+  /// where the exons' bands sink, below about 40 kb; up where the
   /// nucleosomes wind in their DNA, below about 2.8 kb, and again where they
-  /// are named and the bare start becomes the helix, below about 700 bp; and
-  /// down where the helix's bases come in, below about 160 bp.
+  /// are named, the grooves come up and the skin clears, below about 900 bp;
+  /// and down once the helix is clear and its bases come in, below about
+  /// 100 bp. Worked out over every gene's step at 60 fps, so that each of
+  /// the six gets more than half a second either way.
   static const List<(double, double, double)> _changes =
       <(double, double, double)>[
         (40000, 0.4, 1.85),
         (2800, 0.3, 2.5),
-        (700, 0.25, 2.5),
-        (160, 0.3, -4.0),
+        (900, 0.25, 3.0),
+        (100, 0.4, -6.0),
       ];
 
   /// What a decade weighs where the view is 10^[decade] base pairs wide.

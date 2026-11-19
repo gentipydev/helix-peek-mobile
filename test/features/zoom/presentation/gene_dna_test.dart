@@ -206,6 +206,8 @@ void main() {
           expect(scene.sunkAt(span), 0, reason: t.slug);
           expect(scene.packedShown(frame), 0, reason: t.slug);
           expect(scene.helixShown(frame), (0, 0), reason: t.slug);
+          // No grooves: the gene stands still at its stop.
+          expect(scene.groovesShown(frame), 0, reason: t.slug);
         }
       }
     }
@@ -219,16 +221,28 @@ void main() {
       final double winds = DnaDive.windsFrom(gene);
       final double sinks = math.min(gene, 10 * winds);
       // What happens where, by the view's width, and the least time each
-      // is given: the exons sinking, the beads winding in the DNA between
-      // them, the beads named, the bare start becoming the helix, its bases
-      // coming in. The user would have the step twice as fast as at eight
-      // seconds: half a second or more each.
+      // is given: the exons' bands sinking, the beads winding in the DNA
+      // between them, the beads named, the DNA's grooves coming up, its skin
+      // clearing onto the helix, the helix's bases coming in. The user would
+      // have the step twice as fast as at eight seconds: half a second or
+      // more each.
       final List<(String, double, double, double)> stages =
           <(String, double, double, double)>[
-            if (sinks > winds) ('the exons sinking', sinks, winds, 0.45),
+            if (sinks > winds) ('the bands sinking', sinks, winds, 0.45),
             ('the beads winding in', winds, winds / DnaScene.windsOver, 0.6),
             ('the beads named', 600, 220, 0.6),
-            ('the helix coming', 800, 300, 0.6),
+            (
+              'the grooves coming',
+              DnaScene.grooving.$1,
+              DnaScene.grooving.$2,
+              0.6,
+            ),
+            (
+              'the skin clearing',
+              DnaScene.clearing.$1,
+              DnaScene.clearing.$2,
+              0.6,
+            ),
             ('its bases coming', 220, 40, 0.6),
           ];
       final double from = depth.depthOf(ZoomStop.gene);

@@ -38,10 +38,17 @@ import 'zoom_subject.dart';
 ///   string ([ChromatinLayout]); the stretch round the start, which a gene
 ///   being read keeps bare, stays where it is, and the first of them is
 ///   named;
-/// - the bare start thickens to the home screen's own double helix
-///   ([DnaHelixPainter]), a twisted rope at first that shows its grooves as
-///   it grows, its bases coming in as they can be told apart, the record's
-///   first bases in their own colours;
+/// - the DNA is a lit tube all the way, and as it thickens its grooves come
+///   up over it: its two backbones as ridges where they face the reader,
+///   the helix's own, at its angle and turning with it ([DnaGrooves]), so a
+///   nucleosome's DNA is a grooved rope round its core, never loose strands
+///   (the user's choice of 2026-11-18);
+/// - over the record's first bases the DNA's skin clears, cut square at the
+///   last of them, and the home screen's own double helix
+///   ([DnaHelixPainter]) is there under it, its backbones where the ridges
+///   were, easing from the stretch's colour to the quiet ink as its bases
+///   come up in their own colours; past them the DNA keeps its skin, into
+///   the first nucleosome;
 /// - as its 5′ end is named, each base's letter comes up in its ball, which
 ///   grows to hold it ([DnaHelixPainter.letteredGrowth]).
 ///
@@ -100,9 +107,25 @@ final class DnaScene extends ZoomScene {
   /// the bases come up, the record holding none of them.
   double contextAt(double span) => 1 - _fall(span, 600, 250);
 
-  /// How much of the bare start is the helix's: its tube hands over to the
-  /// painter's duplex, a twisted rope as thick as it.
-  static double helixAt(double span) => _fall(span, 800, 300);
+  /// Where the DNA's grooves come up over its body, by the view's width in
+  /// base pairs: from a little under the narrowest gene's stop (1,000 bp),
+  /// so no gene's stop ever has them and the gene stands still there.
+  static const (double, double) grooving = (900, 350);
+
+  /// Where the DNA's skin over the helix's bases clears onto the helix: done
+  /// before the helix's 3′ end, 33 bases in, reaches the fade at the
+  /// canvas's right edge (at 121 bp across).
+  static const (double, double) clearing = (320, 125);
+
+  /// How far the DNA's grooves show over its body: none at the gene's stop,
+  /// its two backbones whole by the time its skin clears.
+  static double groovesAt(double span) =>
+      _fall(span, grooving.$1, grooving.$2);
+
+  /// How far the skin over the helix's bases has cleared, the painter's
+  /// helix coming up under it.
+  static double clearedAt(double span) =>
+      _fall(span, clearing.$1, clearing.$2);
 
   /// How much of the helix's bases show, and the least width its backbones
   /// are drawn at, on screen: thin strands far out, its own at its stop.
@@ -154,11 +177,96 @@ final class DnaScene extends ZoomScene {
     dive: subject.depth.dive,
   );
 
-  /// How much of the helix shows at [frame], and of its bases.
+  /// How much of the helix shows at [frame], and of its bases: none of it
+  /// where it has fewer bases than the painter draws.
   @visibleForTesting
   (double, double) helixShown(ZoomFrame frame) {
     final double span = _span(frame);
-    return (helixAt(span), basesAt(span));
+    return (_cleared(span), basesAt(span));
+  }
+
+  /// How far the DNA's grooves show at [frame].
+  @visibleForTesting
+  double groovesShown(ZoomFrame frame) => groovesAt(_span(frame));
+
+  /// The DNA's grooves at [frame], as it is drawn on the ambient clock, or
+  /// null where none show and it is drawn still.
+  @visibleForTesting
+  DnaGrooves? groovesOf(ZoomFrame frame) {
+    final double span = _span(frame);
+    final double grooves = groovesAt(span);
+    if (grooves <= 0) {
+      return null;
+    }
+    return DnaGrooves(
+      shown: grooves,
+      turn: _turn(frame),
+      anchor: subject.dnaBases.toDouble(),
+      cleared: _cleared(span),
+    );
+  }
+
+  /// How thick the DNA is drawn at [frame], in pixels.
+  @visibleForTesting
+  double thickAt(ZoomFrame frame) {
+    final double span = _span(frame);
+    return _thick(span, frame.size.width / span, sunkAt(span));
+  }
+
+  /// Where the point [offset] base pairs of the genome from the gene's 5′
+  /// end lies across the screen at [frame].
+  @visibleForTesting
+  double dnaX(ZoomFrame frame, double offset) => _x(frame, offset);
+
+  /// How far the skin has cleared at [span]: never, where there is no helix
+  /// to clear onto.
+  double _cleared(double span) =>
+      subject.dnaBases < 4 ? 0 : clearedAt(span);
+
+  /// The colour the helix's backbones are drawn in at [frame]: as the skin
+  /// clears, the ridges of the stretch its bases lie in (exon 1's
+  /// untranslated start, for nearly every gene), easing to the quiet ink as
+  /// its bases come up; the quiet ink once they are whole, as at its stop.
+  @visibleForTesting
+  Color backboneAt(ZoomFrame frame) {
+    final double bases = basesAt(_span(frame));
+    final ZoomInks inks = frame.inks;
+    if (bases >= 1) {
+      return inks.label;
+    }
+    return Color.lerp(
+      GeneStrand.ridge(GeneStrand.ink(inks, _startKind), inks),
+      inks.label,
+      bases,
+    )!;
+  }
+
+  /// What most of the helix's bases are: an exon's untranslated or coding
+  /// part, or an intron.
+  late final GenePieceKind _startKind = () {
+    final Map<GenePieceKind, int> counts = <GenePieceKind, int>{};
+    for (int i = 0; i < subject.dnaBases; i++) {
+      final GenePieceKind kind = subject.layout.kindAt((i + 0.5) / _scale);
+      counts[kind] = (counts[kind] ?? 0) + 1;
+    }
+    GenePieceKind best = GenePieceKind.utr;
+    int most = -1;
+    for (final MapEntry<GenePieceKind, int> entry in counts.entries) {
+      if (entry.value > most) {
+        most = entry.value;
+        best = entry.key;
+      }
+    }
+    return best;
+  }();
+
+  /// How far the helix has turned at [frame], as the home screen's turns,
+  /// eased to the nearest flat as it unzips: the DNA's grooves turn with it.
+  double _turn(ZoomFrame frame) {
+    final double turn =
+        (HelixModel.staticRotationTurns + frame.clock / turnSeconds) % 1;
+    final double flat = turn < 0.5 ? 0 : 1;
+    return turn + (flat - turn) * smoothstep(frame.unzip);
   }
 
   // From the gene's stop on, this scene draws the gene's DNA, so it is all
@@ -170,30 +278,32 @@ final class DnaScene extends ZoomScene {
   static const Animation<double> _still = AlwaysStoppedAnimation<double>(0);
 
   DnaHelixPainter? _painter;
-  (ZoomInks, double, double, double, double)? _painted;
+  (ZoomInks, double, double, double, double, Color)? _painted;
 
   /// The painter for the helix in [inks], [unzip] of the way unzipped, its
   /// strands no thinner than [floor] painter pixels, [bases] of its bases
-  /// showing and [letters] of their letters, made again only when one of
-  /// them changes.
+  /// showing and [letters] of their letters, its backbones in [backbone]
+  /// (the quiet ink by default), made again only when one of them changes.
   DnaHelixPainter? _helix(
     ZoomInks inks,
     double unzip, {
     double floor = 0,
     double bases = 1,
     double letters = 0,
+    Color? backbone,
   }) {
     final int count = subject.dnaBases;
     if (count < 4) {
       return null;
     }
     final double quantised = (unzip * 60).roundToDouble() / 60;
-    final (ZoomInks, double, double, double, double) now = (
+    final (ZoomInks, double, double, double, double, Color) now = (
       inks,
       quantised,
       floor,
       bases,
       letters,
+      backbone ?? inks.label,
     );
     if (_painter == null || _painted != now) {
       final String sequence = subject.record.sequence;
@@ -213,7 +323,7 @@ final class DnaScene extends ZoomScene {
               HelixPalette.ofBase(sequence[i]),
           ]),
         ),
-        backbone: inks.label,
+        backbone: backbone ?? inks.label,
         adenine: inks.bases.adenine,
         thymine: inks.bases.thymine,
         guanine: inks.bases.guanine,
@@ -321,33 +431,42 @@ final class DnaScene extends ZoomScene {
   @override
   void paint(Canvas canvas, ZoomFrame frame) {
     final double span = _span(frame);
+    final double sunk = sunkAt(span);
+    if (sunk < 1) {
+      GeneStrand.bands(
+        canvas,
+        frame.inks,
+        subject.layout,
+        x: (double offset) => screenX(frame, offset),
+        mid: frame.size.height / 2,
+        width: frame.size.width,
+        sink: sunk,
+      );
+    }
+    // Still until its grooves show, and drawn here; once they do, they turn
+    // with the helix, and the DNA is drawn over the bands on the ambient
+    // clock ([paintAmbient]): the stripes are at nothing as it moves over,
+    // so no pixel changes.
+    if (groovesAt(span) <= 0) {
+      _fibre(canvas, frame, null);
+    }
+  }
+
+  /// The gene's DNA as chromatin ([ChromatinFibre]) at [frame], its
+  /// [grooves] showing if any.
+  void _fibre(Canvas canvas, ZoomFrame frame, DnaGrooves? grooves) {
+    final double span = _span(frame);
     final double w = frame.size.width;
     final double mid = frame.size.height / 2;
     final double perBase = w / span;
     final double sunk = sunkAt(span);
-    // The line the gene's stop draws, thickening to the DNA's own width as
-    // the exons' bands sink behind it.
-    final double thick =
-        GeneStrand.line +
-        math.max(0, thickness * perBase - GeneStrand.line) * sunk;
+    final double thick = _thick(span, perBase, sunk);
     final ZoomInks inks = frame.inks;
     final GeneLayout layout = subject.layout;
     final double scale = _scale;
     final double end = layout.length * scale;
     final double around = contextAt(span);
-    final double helix = helixAt(span);
     final int bare = subject.dnaBases;
-    if (sunk < 1) {
-      GeneStrand.bands(
-        canvas,
-        inks,
-        layout,
-        x: (double offset) => screenX(frame, offset),
-        mid: mid,
-        width: w,
-        sink: sunk,
-      );
-    }
     ChromatinFibre.paint(
       canvas,
       inks,
@@ -357,21 +476,20 @@ final class DnaScene extends ZoomScene {
       width: w,
       packed: packedAt(span),
       thick: thick,
-      // As the bare start becomes the helix the rest of the DNA shows its
-      // twist too: two strands round its grooves, as the helix's own are.
-      twist: helix,
-      marks: <double>[...subject.fibreMarks, bare.toDouble()],
+      grooves: grooves,
+      marks: <double>[
+        ...subject.fibreMarks,
+        bare.toDouble(),
+        bare + DnaGrooves.lip,
+      ],
       // The gene's, along its exons in their colours; the DNA either side of
-      // it as it comes and goes; the bare start giving way to the helix.
+      // it as it comes and goes. Its skin over the helix's bases clears by
+      // the grooves' own reckoning, closing up again past them.
       colourAt: (double offset) {
         final Color ink = GeneStrand.ink(inks, layout.kindAt(offset / scale));
-        double alpha = 1;
-        if (offset < 0 || offset > end) {
-          alpha = around;
-        } else if (offset < bare) {
-          alpha = 1 - helix;
-        }
-        return ink.withValues(alpha: ink.a * alpha);
+        return offset < 0 || offset > end
+            ? ink.withValues(alpha: ink.a * around)
+            : ink;
       },
       depth: ChromatinBeads.depthShownAt(
         frame.progress,
@@ -387,21 +505,55 @@ final class DnaScene extends ZoomScene {
     );
   }
 
+  /// How thick the DNA is drawn where the view is [span] base pairs wide: the
+  /// line the gene's stop draws, thickening to the DNA's own width as the
+  /// exons' bands sink behind it.
+  double _thick(double span, double perBase, double sunk) =>
+      GeneStrand.line +
+      math.max(0, thickness * perBase - GeneStrand.line) * sunk;
+
   @override
   void prepare(ZoomInks inks) => _helix(inks, 0);
 
+  // Its grooves turn with the helix, and the helix turns at rest.
   @override
-  bool wantsClock(ZoomFrame frame) => helixAt(_span(frame)) > 0;
+  bool wantsClock(ZoomFrame frame) => groovesAt(_span(frame)) > 0;
 
-  // The helix turns at rest, so it is drawn over the scene on the ambient
-  // clock, and fades there with the scene itself.
+  // The DNA, once its grooves show, and the helix turn on the ambient clock,
+  // so they are drawn over the scene there, and fade there with the scene
+  // itself.
   @override
   void paintAmbient(Canvas canvas, ZoomFrame frame) {
-    final double helix = helixAt(_span(frame));
-    if (helix <= 0) {
+    final double span = _span(frame);
+    final double grooves = groovesAt(span);
+    if (grooves <= 0) {
       return;
     }
-    _drawHelix(canvas, frame, helix * frame.opacity);
+    final double cleared = _cleared(span);
+    final double w = frame.size.width;
+    final double thick = _thick(span, w / span, sunkAt(span));
+    // Nothing of the DNA is left on the canvas at the helix's stop: the
+    // helix is drawn alone there, as it always was.
+    final bool gone =
+        cleared >= 1 &&
+        contextAt(span) <= 0 &&
+        _x(frame, subject.dnaBases.toDouble()) >= w + thick;
+    if (!gone) {
+      final bool fading = frame.opacity < 0.995;
+      if (fading) {
+        canvas.saveLayer(
+          Offset.zero & frame.size,
+          Paint()..color = Color.fromRGBO(0, 0, 0, frame.opacity),
+        );
+      }
+      _fibre(canvas, frame, groovesOf(frame));
+      if (fading) {
+        canvas.restore();
+      }
+    }
+    if (cleared > 0) {
+      _drawHelix(canvas, frame, cleared * frame.opacity);
+    }
   }
 
   void _drawHelix(Canvas canvas, ZoomFrame frame, double alpha) {
@@ -415,17 +567,12 @@ final class DnaScene extends ZoomScene {
       floor: floorAt(span) / scale,
       bases: basesAt(span),
       letters: lettersShown(frame),
+      backbone: backboneAt(frame),
     );
     if (painter == null) {
       return;
     }
-    // The home screen's turn, eased to the nearest flat as it unzips.
-    final double turn =
-        (HelixModel.staticRotationTurns + frame.clock / turnSeconds) % 1;
-    final double flat = turn < 0.5 ? 0 : 1;
-    _rotation.parent = AlwaysStoppedAnimation<double>(
-      turn + (flat - turn) * smoothstep(frame.unzip),
-    );
+    _rotation.parent = AlwaysStoppedAnimation<double>(_turn(frame));
     // The painter's helix stands along its canvas's height, its middle at
     // the canvas's, its first rung at the top: turned to lie along the gene
     // with its first rung, the 3′ end, at the right, its middle on the
@@ -434,16 +581,17 @@ final class DnaScene extends ZoomScene {
     final Size page = Size(helixRadius * 4.4, length * 1.3);
     final double mid = frame.size.height / 2;
     final double w = frame.size.width;
+    final double threePrime = _x(frame, subject.dnaBases.toDouble());
     // Its 3′ side runs off into the ground at the canvas's right edge, as
-    // the home screen's runs off its own. Where nothing of the DNA lies
-    // under that fade (at the stop, and closing in on it) it is drawn as it
-    // always was, the ground painted over it, with no layer to pay for at
-    // every turn; elsewhere it is erased on a layer of its own, so the DNA
-    // under it on the way in still shows.
+    // the home screen's runs off its own, once it runs off the canvas: until
+    // then its 3′ end meets the DNA going on past it. Where nothing of the
+    // DNA lies under that fade (at the stop, and closing in on it) it is
+    // drawn as it always was, the ground painted over it, with no layer to
+    // pay for at every turn; elsewhere it is erased on a layer of its own,
+    // so the DNA under it on the way in still shows.
+    final double runsOff = smoothstep((threePrime - w) / (0.3 * w));
     final bool alone =
-        alpha >= 0.995 &&
-        _x(frame, subject.dnaBases.toDouble()) >= w &&
-        contextAt(span) <= 0;
+        alpha >= 0.995 && threePrime >= w && contextAt(span) <= 0;
     if (!alone) {
       canvas.saveLayer(
         Offset.zero & frame.size,
@@ -457,18 +605,20 @@ final class DnaScene extends ZoomScene {
     canvas.translate(-page.width / 2, -page.height / 2);
     painter.paint(canvas, page);
     canvas.restore();
-    final Rect fade = Rect.fromLTRB(w * 0.72, 0, w, frame.size.height);
-    canvas.drawRect(
-      fade,
-      Paint()
-        ..blendMode = alone ? BlendMode.srcOver : BlendMode.dstOut
-        ..shader = LinearGradient(
-          colors: <Color>[
-            frame.inks.ground.withValues(alpha: 0),
-            frame.inks.ground,
-          ],
-        ).createShader(fade),
-    );
+    if (runsOff > 0) {
+      final Rect fade = Rect.fromLTRB(w * 0.72, 0, w, frame.size.height);
+      canvas.drawRect(
+        fade,
+        Paint()
+          ..blendMode = alone ? BlendMode.srcOver : BlendMode.dstOut
+          ..shader = LinearGradient(
+            colors: <Color>[
+              frame.inks.ground.withValues(alpha: 0),
+              frame.inks.ground.withValues(alpha: runsOff),
+            ],
+          ).createShader(fade),
+      );
+    }
     if (!alone) {
       canvas.restore();
     }

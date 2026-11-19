@@ -59,6 +59,11 @@ abstract final class GeneStrand {
     kind == GenePieceKind.cds ? codingBand : untranslatedBand,
   )!;
 
+  /// A backbone's ridge over a stretch of DNA in [skin]: its colour lifted
+  /// toward the light, as the helix's backbones are the quiet ink.
+  static Color ridge(Color skin, ZoomInks inks) =>
+      Color.lerp(skin, inks.text, 0.3)!.withValues(alpha: skin.a);
+
   /// Strokes [path] as a stretch of DNA [width] pixels thick in [colour]:
   /// a line, and once it is thick enough to have one, a lit tube, its upper
   /// edge catching the light.

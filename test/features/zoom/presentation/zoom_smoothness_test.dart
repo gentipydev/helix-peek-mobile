@@ -661,6 +661,7 @@ void main() {
             final (double helix, double bases) = scene.helixShown(frame);
             out['the exons'] = frame.opacity * scene.exonsShown(frame);
             out['the packing'] = frame.opacity * scene.packedShown(frame);
+            out['the grooves'] = frame.opacity * scene.groovesShown(frame);
             out['the helix'] = frame.opacity * helix;
             out['its bases'] = frame.opacity * bases;
             out['their letters'] = frame.opacity * scene.lettersShown(frame);

@@ -266,7 +266,6 @@ final class GeneScene extends ZoomScene {
       width: w,
       packed: 0,
       thick: GeneStrand.line,
-      twist: 0,
       marks: subject.fibreMarks,
       colourAt: (double offset) {
         final Color ink = GeneStrand.ink(
