@@ -3596,10 +3596,11 @@ animation laid out in space).
   its line in the accent, marks where transcription starts (no bent arrow:
   the user found the two heavy, 2026-10-16); quiet names in a row under the
   line say what the rest is (`GeneNames`: the widest coding part "exon", the
-  widest untranslated part 6 px wide or more "UTR", the longest intron
-  "intron", the first core clear of the exons "nucleosome"; the user's ask
-  of 2026-10-16); "3′" stands over the gene's far end, and a ruler counts
-  from the 5′ end.
+  widest untranslated part 6 px wide or more "UTR", each where its band is
+  as clear of the beads lying over it as it has room for, so the dot does
+  not name a nucleosome; the longest intron "intron"; the first core clear
+  of the exons "nucleosome"; the user's ask of 2026-10-16); "3′" stands
+  over the gene's far end, and a ruler counts from the 5′ end.
 - The card names the gene and its length, its exons and its strand:
   `INS · 1,431 bases`, `Three exons · reverse strand`.
 
