@@ -166,18 +166,20 @@ final class GeneScene extends ZoomScene {
       quiet: true,
       row: mid + namesBelow,
     );
-    double middle(GenePiece piece) =>
-        (_x(frame, piece.start) + _x(frame, piece.end)) / 2;
-    final GenePiece? exon = names.exon;
+    final double? exon = names.exon;
     if (exon != null) {
-      name('gene:exon', 'exon', Offset(middle(exon), mid + GeneStrand.coding));
+      name(
+        'gene:exon',
+        'exon',
+        Offset(_x(frame, exon), mid + GeneStrand.coding),
+      );
     }
-    final GenePiece? utr = names.utr;
+    final double? utr = names.utr;
     if (utr != null) {
       name(
         'gene:utr',
         'UTR',
-        Offset(middle(utr), mid + GeneStrand.untranslated),
+        Offset(_x(frame, utr), mid + GeneStrand.untranslated),
       );
     }
     final double? intron = names.intron;
@@ -501,8 +503,9 @@ final class GeneScene extends ZoomScene {
 /// What the gene's stop names besides its ends, each chosen by rule from
 /// the record at the stop's scale, so that none changes on the way to the
 /// stop or from it: the widest coding part of an exon, the widest
-/// untranslated part where it is wide enough to point at, the widest
-/// intron, and a nucleosome on the line clear of the exons.
+/// untranslated part where it is wide enough to point at, each where it is
+/// farthest from the nucleosomes lying over its band, the widest intron,
+/// and a nucleosome on the line clear of the exons.
 @immutable
 final class GeneNames {
   const GeneNames({this.exon, this.utr, this.intron, this.nucleosome});
@@ -524,9 +527,10 @@ final class GeneNames {
       return best;
     }
 
-    GenePiece? utr = widest(GenePieceKind.utr);
-    if (utr != null && utr.length * scale * perBase < leastUtr) {
-      utr = null;
+    GenePiece? untranslated = widest(GenePieceKind.utr);
+    if (untranslated != null &&
+        untranslated.length * scale * perBase < leastUtr) {
+      untranslated = null;
     }
     // The nucleosomes the stop shows, in order along the gene, and how far
     // each reaches either side of its middle, in the genome's base pairs.
@@ -604,9 +608,39 @@ final class GeneNames {
       }
       intron = at / scale;
     }
+    // A part is pointed at as clear of every bead the stop shows as it has
+    // room for, up to a bead's reach, and as near its middle as that
+    // allows: its band lies behind them, and a name's dot on a bead would
+    // name the nucleosome.
+    double? clearOf(GenePiece? piece) {
+      if (piece == null) {
+        return null;
+      }
+      final double a = piece.start * scale;
+      final double b = piece.end * scale;
+      final double middle = (a + b) / 2;
+      // Half a pixel apart at the stop.
+      final int steps = ((b - a) * perBase / 0.5).ceil().clamp(1, 2000);
+      double best = middle;
+      double room = -1;
+      for (int i = 0; i <= steps; i++) {
+        final double at = a + (b - a) * i / steps;
+        double near = reach;
+        for (final double place in beads) {
+          near = math.min(near, (place - at).abs());
+        }
+        final bool nearer = (at - middle).abs() < (best - middle).abs();
+        if (near > room + 1e-9 || (near > room - 1e-9 && nearer)) {
+          room = math.max(room, near);
+          best = at;
+        }
+      }
+      return best / scale;
+    }
+
     return GeneNames(
-      exon: widest(GenePieceKind.cds),
-      utr: utr,
+      exon: clearOf(widest(GenePieceKind.cds)),
+      utr: clearOf(untranslated),
       intron: intron,
       nucleosome: nucleosome,
     );
@@ -616,11 +650,13 @@ final class GeneNames {
   /// stop to be named.
   static const double leastUtr = 6;
 
-  /// The widest coding part of an exon.
-  final GenePiece? exon;
+  /// Where the widest coding part of an exon is named, in base pairs of the
+  /// record from the gene's 5′ end.
+  final double? exon;
 
-  /// The widest untranslated part, where it is [leastUtr] wide at the stop.
-  final GenePiece? utr;
+  /// Where the widest untranslated part is named, where it is [leastUtr]
+  /// wide at the stop, in base pairs of the record from the gene's 5′ end.
+  final double? utr;
 
   /// Where an intron is named, in base pairs of the record from the gene's
   /// 5′ end.

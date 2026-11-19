@@ -612,6 +612,42 @@ void main() {
           }
         }
 
+        // An exon's and an untranslated part's dots sit on their bands as
+        // clear of the beads lying over them as the part has room for, up
+        // to a bead's reach: a dot on a bead would name the nucleosome.
+        final double reach =
+            ChromatinLayout.reach * ChromatinFibre.magnified(perBase) * perBase;
+        double nearest(double at) {
+          double near = double.infinity;
+          for (final int index in beads) {
+            near = math.min(near, (beadX(index) - at).abs());
+          }
+          return near;
+        }
+
+        for (final (ZoomCallout? part, GenePieceKind kind) in <(
+          ZoomCallout?,
+          GenePieceKind,
+        )>[(exon, GenePieceKind.cds), (utr, GenePieceKind.utr)]) {
+          if (part == null) {
+            continue;
+          }
+          final GenePiece piece = pieces.firstWhere(
+            (GenePiece p) => p.kind == kind && on(p, part.target.dx),
+          );
+          final double left = math.min(x(piece.start), x(piece.end));
+          final double right = math.max(x(piece.start), x(piece.end));
+          double room = 0;
+          for (double at = left; at <= right; at += 0.5) {
+            room = math.max(room, nearest(at));
+          }
+          expect(
+            nearest(part.target.dx),
+            greaterThanOrEqualTo(math.min(room, reach) - 1),
+            reason: '$what: ${kind.name} clear of the beads',
+          );
+        }
+
         final ZoomCallout bead = named['gene:nucleosome']!;
         expect(bead.target.dy, greaterThan(mid), reason: what);
         expect(
