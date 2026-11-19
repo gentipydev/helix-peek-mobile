@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/chromosome_colors.dart';
 import '../../domain/chromatin_layout.dart';
 import '../zoom_inks.dart';
 import 'sculpt.dart';
@@ -9,8 +10,9 @@ import 'sculpt.dart';
 /// A nucleosome's core, the histone octamer the DNA winds round: a lit puck
 /// about 6.5 nm across and 5.7 nm thick (Luger et al. 1997), seen from
 /// above and in front as [ChromatinLayout] lays its DNA round it, in the
-/// zoom's warm neutrals: its face in the light and its side, which the DNA
-/// crosses, a shade down, both clear of the ground.
+/// chromosome's warm stone (`ChromosomeColors.zoom`), the chromatin it is
+/// the unit of: its face in the light and its side, which the DNA crosses,
+/// a shade down, both clear of the ground.
 abstract final class NucleosomeArt {
   /// The octamer's radius and half its thickness, in base pairs' lengths.
   static const double radius = 3.2 / 0.34;
@@ -48,6 +50,7 @@ abstract final class NucleosomeArt {
       face.right,
       foot.bottom,
     );
+    final ChromatinRamp stone = ChromosomeColors.zoom.body;
     final bool fading = alpha < 0.995;
     if (fading) {
       canvas.saveLayer(
@@ -69,7 +72,7 @@ abstract final class NucleosomeArt {
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[inks.lit(0.38), inks.lit(0.2), inks.lit(0.05)],
+          colors: <Color>[stone.base, stone.shadow, stone.crevice],
           stops: const <double>[0, 0.55, 1],
         ).createShader(Rect.fromLTRB(whole.left, face.center.dy, whole.right,
             whole.bottom)),
@@ -81,7 +84,7 @@ abstract final class NucleosomeArt {
         ..shader = RadialGradient(
           center: Sculpt.highlight,
           radius: 1.1,
-          colors: <Color>[inks.lit(0.72), inks.lit(0.5), inks.lit(0.3)],
+          colors: <Color>[stone.specular, stone.highlight, stone.base],
           stops: const <double>[0, 0.55, 1],
         ).createShader(face),
     );
@@ -90,7 +93,7 @@ abstract final class NucleosomeArt {
       Path()..addOval(face),
       face,
       inks,
-      width: math.max(0.8, 0.06 * r),
+      width: (0.06 * r).clamp(0.8, 1.6),
       strength: 0.5,
     );
     if (fading) {
