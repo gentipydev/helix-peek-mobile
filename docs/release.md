@@ -8,14 +8,11 @@ cost, is `../helix-peak-backend/SECURITY.md`.
 
 These cannot be changed after a store has published the app.
 
-**The app's id.** It is still Flutter's placeholder on both platforms:
-`com.example.helixpeek`. Google Play refuses `com.example`. Choose a reverse-DNS name you
-control (for example `io.github.<account>.helixpeek`) and set it in:
-
-- `android/app/build.gradle.kts`: `namespace` and `applicationId`. Move
-  `MainActivity.kt` to the matching package directory and change its `package` line.
-- `ios/Runner.xcodeproj` (Runner target → Signing & Capabilities): `PRODUCT_BUNDLE_IDENTIFIER`
-  for Runner, and `<id>.RunnerTests` for RunnerTests.
+**The app's id.** Android: `ai.helixpeek.app` (set 2026-11-19 in
+`android/app/build.gradle.kts`, `namespace` and `applicationId`; `MainActivity.kt` lives in
+the matching package). iOS still uses Flutter's placeholder `com.example.helixpeek`: before
+the first App Store upload, set `PRODUCT_BUNDLE_IDENTIFIER` in `ios/Runner.xcodeproj`
+(Runner target, and `<id>.RunnerTests` for RunnerTests).
 
 **The Android upload key.** Release builds are signed with the key that
 `android/key.properties` names. Without that file they fall back to the debug key, so
@@ -88,7 +85,9 @@ functionality* and *Fraud prevention, security, and compliance*. There is no acc
 there is nothing to delete beyond uninstalling. A build a phone stopped can be
 discarded from that phone.
 
-**A privacy policy URL** is required by both stores. It must state the facts in "What the
+**The privacy policy** is `docs/privacy.md`, served by GitHub Pages at
+<https://gentipydev.github.io/helix-peek-mobile/privacy> (Pages: branch `main`, folder
+`/docs`). It is required by both stores. It must state the facts in "What the
 app holds, and sends". The backend keeps the install id with each build request it
 records; Supabase (database and storage), Render (the API) and Modal (the builds) are its
 processors.

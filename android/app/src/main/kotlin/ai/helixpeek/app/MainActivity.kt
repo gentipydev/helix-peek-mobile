@@ -1,4 +1,4 @@
-package com.example.helixpeek
+package ai.helixpeek.app
 
 import io.flutter.embedding.android.FlutterActivity
 
