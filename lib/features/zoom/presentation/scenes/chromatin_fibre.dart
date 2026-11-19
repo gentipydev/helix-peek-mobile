@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -12,10 +11,13 @@ import 'nucleosome_art.dart';
 
 /// The DNA's grooves as the fibre draws them: its two backbones as fine
 /// ridges along its lit body where they face the reader, at the angle the
-/// helix's painter gives them and turning with it, so that where the DNA's
-/// skin clears onto the helix ([DnaScene]) the ridges are the painter's own
-/// backbones (the user's choice of 2026-11-18: the DNA a body with its
-/// grooves all the way down, never two loose strands).
+/// helix's painter gives them and turning with it (the user's choice of
+/// 2026-11-18: the DNA a body with its grooves, not a scribble). As the
+/// view nears the helix the body clears, all along the DNA ([cleared]), and
+/// the DNA is an open double helix, both backbones showing, the far one in
+/// shade, wound round each core (the user's ask of 2026-11-19: to see the
+/// helix round the nucleosome); over the record's first bases the helix's
+/// painter comes up under it ([DnaScene]), its backbones where they are.
 @immutable
 final class DnaGrooves {
   const DnaGrooves({
@@ -37,8 +39,8 @@ final class DnaGrooves {
   /// gene's 5′ end.
   final double anchor;
 
-  /// How far the DNA's skin over those bases has cleared onto the helix,
-  /// from 0 to 1.
+  /// How far the DNA's skin has cleared, all along it, from 0 to 1: over
+  /// the record's first bases onto the helix.
   final double cleared;
 
   /// The helix's painter's perspective: its focal length, in radii.
@@ -47,11 +49,6 @@ final class DnaGrooves {
   /// A ridge's width on screen, in pixels: the least the painter draws a
   /// backbone at, short of the view it draws the helix whole in.
   static const double strand = 1.4;
-
-  /// Over how many base pairs past the helix's last base the DNA's skin
-  /// closes up again, as it clears: the DNA going on past the helix as a
-  /// rope, not cut off.
-  static const double lip = 3;
 
   /// The angle round the duplex of its first backbone at [offset] base
   /// pairs from the gene's 5′ end, or of its second, a minor groove on: as
@@ -71,17 +68,8 @@ final class DnaGrooves {
     return (thick / 2 * math.cos(angle) * focal / (focal + s), s < 0);
   }
 
-  /// How much of the DNA's body shows at [offset]: over the helix's bases,
-  /// what has not cleared, closing up again over the [lip] past them.
-  double skinAt(double offset) {
-    if (offset < 0 || cleared <= 0 || offset >= anchor + lip) {
-      return 1;
-    }
-    if (offset < anchor) {
-      return 1 - cleared;
-    }
-    return 1 - cleared * (1 - (offset - anchor) / lip);
-  }
+  /// How much of the DNA's body shows: what has not cleared.
+  double get skin => 1 - cleared;
 
   /// How wide the ridges are at [offset], a share of [strand]: over the
   /// helix's bases they thin away under the painter's own backbones once
@@ -328,6 +316,11 @@ abstract final class ChromatinFibre {
     if (grooves != null && grooves.shown > 0) {
       samples = math.max(samples, ((to - from) * perBase / 1.2).ceil());
     }
+    // Where its backbones lie round it: a frame at each sample, carried
+    // along its way round the core.
+    final List<_Frame>? frames = grooves != null && grooves.shown > 0
+        ? _coilFrames(samples)
+        : null;
     FibrePoint last = ChromatinLayout.coilAt(0);
     for (int i = 0; i < samples; i++) {
       final double u = (i + 1) / samples;
@@ -343,6 +336,8 @@ abstract final class ChromatinFibre {
           screen(p),
           a,
           b,
+          frames?[i] ?? _straight,
+          frames?[i + 1] ?? _straight,
         );
       }
       last = p;
@@ -362,6 +357,73 @@ abstract final class ChromatinFibre {
   /// How long a nucleosome's DNA is from where it leaves the line to where
   /// it comes back, in base pairs' lengths, near enough.
   static const double _length = 160;
+
+  /// The frames a nucleosome's DNA carries its backbones in, at each of
+  /// [samples] + 1 points along its way round the core: carried with as
+  /// little turn as can be (each the last reflected twice, Wang et al.
+  /// 2008), from the line's own where it leaves it, and evened out along the
+  /// way so that it is the line's again where it comes back to it: its
+  /// backbones go round the core and on along the line without a break.
+  static List<_Frame> _coilFrames(int samples) =>
+      _frames[samples] ??= () {
+        _Vec at(double u) {
+          final FibrePoint p = ChromatinLayout.coilAt(u);
+          return (p.along, p.across, p.depth);
+        }
+
+        _Vec way(double u) {
+          const double h = 1e-4;
+          return _unit(_minus(at(u + h), at(u - h)));
+        }
+
+        final List<_Vec> points = <_Vec>[
+          for (int i = 0; i <= samples; i++) at(i / samples),
+        ];
+        final List<_Vec> ways = <_Vec>[
+          for (int i = 0; i <= samples; i++) way(i / samples),
+        ];
+        final List<_Vec> normals = <_Vec>[(0, 1, 0)];
+        final List<double> lengths = <double>[0];
+        for (int i = 0; i < samples; i++) {
+          final _Vec v1 = _minus(points[i + 1], points[i]);
+          final double c1 = _dot(v1, v1);
+          final _Vec r = normals[i];
+          final _Vec rL = _minus(r, _times(v1, 2 / c1 * _dot(v1, r)));
+          final _Vec tL = _minus(ways[i], _times(v1, 2 / c1 * _dot(v1, ways[i])));
+          final _Vec v2 = _minus(ways[i + 1], tL);
+          final double c2 = _dot(v2, v2);
+          normals.add(
+            c2 < 1e-12
+                ? rL
+                : _unit(_minus(rL, _times(v2, 2 / c2 * _dot(v2, rL)))),
+          );
+          lengths.add(lengths[i] + math.sqrt(c1));
+        }
+        // The turn the frame has taken by the end, given back evenly along
+        // the way.
+        final _Vec end = ways[samples];
+        final _Vec home = _unit(
+          _minus((0, 1, 0), _times(end, _dot((0, 1, 0), end))),
+        );
+        final double turned = math.atan2(
+          _dot(end, _cross(normals[samples], home)),
+          _dot(normals[samples], home),
+        );
+        return <_Frame>[
+          for (int i = 0; i <= samples; i++)
+            () {
+              final _Vec n = _turn(
+                normals[i],
+                ways[i],
+                turned * lengths[i] / lengths[samples],
+              );
+              final _Vec q = _cross(n, ways[i]);
+              return _Frame(n.$1, n.$2, n.$3, q.$1, q.$2, q.$3);
+            }(),
+        ];
+      }();
+
+  static final Map<int, List<_Frame>> _frames = <int, List<_Frame>>{};
 
   /// The colour most of the DNA from [from] to [to] is drawn in, its colour
   /// changing only at [marks] (in order): a stretch of a nucleosome's DNA
@@ -413,11 +475,83 @@ abstract final class ChromatinFibre {
   }
 }
 
+/// A direction, along the fibre, across it down the screen and toward the
+/// reader.
+typedef _Vec = (double, double, double);
+
+/// Where the DNA's backbones lie round it at a point: the way they are at
+/// angle 0 (n), and at a quarter turn on (b).
+@immutable
+final class _Frame {
+  const _Frame(this.nx, this.ny, this.nz, this.bx, this.by, this.bz);
+
+  final double nx;
+  final double ny;
+  final double nz;
+  final double bx;
+  final double by;
+  final double bz;
+}
+
+/// The line's own frame, as the helix's painter lays it: a backbone at
+/// angle 0 straight down the screen, at a quarter turn away from the reader.
+const _Frame _straight = _Frame(0, 1, 0, 0, 0, -1);
+
+/// A stretch of the DNA as laid: its colour, its ends on screen and in base
+/// pairs, and the frames its backbones lie in at its ends.
+@immutable
+final class _Stretch {
+  const _Stretch(
+    this.colour,
+    this.a,
+    this.b,
+    this.from,
+    this.to,
+    this.first,
+    this.last,
+  );
+
+  final Color colour;
+  final Offset a;
+  final Offset b;
+  final double from;
+  final double to;
+  final _Frame first;
+  final _Frame last;
+}
+
+_Vec _minus(_Vec a, _Vec b) => (a.$1 - b.$1, a.$2 - b.$2, a.$3 - b.$3);
+_Vec _times(_Vec a, double k) => (a.$1 * k, a.$2 * k, a.$3 * k);
+double _dot(_Vec a, _Vec b) => a.$1 * b.$1 + a.$2 * b.$2 + a.$3 * b.$3;
+_Vec _cross(_Vec a, _Vec b) => (
+  a.$2 * b.$3 - a.$3 * b.$2,
+  a.$3 * b.$1 - a.$1 * b.$3,
+  a.$1 * b.$2 - a.$2 * b.$1,
+);
+_Vec _unit(_Vec a) {
+  final double n = math.sqrt(_dot(a, a));
+  return n < 1e-12 ? a : _times(a, 1 / n);
+}
+
+/// [v] turned [angle] about the unit [axis].
+_Vec _turn(_Vec v, _Vec axis, double angle) {
+  final double c = math.cos(angle);
+  final double s = math.sin(angle);
+  final _Vec k = _cross(axis, v);
+  final double along = _dot(axis, v) * (1 - c);
+  return (
+    v.$1 * c + k.$1 * s + axis.$1 * along,
+    v.$2 * c + k.$2 * s + axis.$2 * along,
+    v.$3 * c + k.$3 * s + axis.$3 * along,
+  );
+}
+
 /// The DNA's strokes by colour, laid as it runs: a run of one colour is one
-/// stroke, so the DNA turns without seams; its body always drawn, a lit
-/// tube, and over it, where its [grooves] show, its two backbones as ridges
-/// where they face the reader. Colours are told apart as they are drawn, to
-/// the 8 bits of a pixel, so two that differ by a rounding are one stroke.
+/// stroke, so the DNA turns without seams; its body a lit tube, and with
+/// it, where its [grooves] show, its two backbones: the near halves as
+/// ridges over the body, the far halves under it, showing as the body
+/// clears. Colours are told apart as they are drawn, to the 8 bits of a
+/// pixel, so two that differ by a rounding are one stroke.
 final class _Strokes {
   _Strokes(this.grooves);
 
@@ -427,28 +561,21 @@ final class _Strokes {
   final Map<int, Color> _inks = <int, Color>{};
   final Map<int, Offset> _ends = <int, Offset>{};
 
-  /// Each stretch laid: its colour, its ends on screen and in base pairs.
-  final List<(Color, Offset, Offset, double, double)> _laid =
-      <(Color, Offset, Offset, double, double)>[];
+  /// Each stretch laid.
+  final List<_Stretch> _laid = <_Stretch>[];
 
-  /// The stretches whose skin closes up along them, past the helix's last
-  /// base: their colour, their ends on screen, and their skin at each end.
-  final List<(Color, Offset, Offset, double, double)> _closing =
-      <(Color, Offset, Offset, double, double)>[];
-
-  void add(Color colour, Offset a, Offset b, double from, double to) {
-    _laid.add((colour, a, b, from, to));
-    final DnaGrooves? grooves = this.grooves;
-    if (grooves != null) {
-      final double first = grooves.skinAt(from);
-      final double last = grooves.skinAt(to);
-      if ((first - last).abs() > 1e-6) {
-        _closing.add((colour, a, b, first, last));
-        return;
-      }
-    }
-    // Its body, less what has cleared of its skin over the helix's bases.
-    final double skin = grooves?.skinAt((from + to) / 2) ?? 1;
+  void add(
+    Color colour,
+    Offset a,
+    Offset b,
+    double from,
+    double to, [
+    _Frame first = _straight,
+    _Frame last = _straight,
+  ]) {
+    _laid.add(_Stretch(colour, a, b, from, to, first, last));
+    // Its body, less what has cleared of its skin.
+    final double skin = grooves?.skin ?? 1;
     final Color body = skin < 1
         ? colour.withValues(alpha: colour.a * skin)
         : colour;
@@ -467,7 +594,8 @@ final class _Strokes {
   }
 
   /// Draws the DNA [thick] pixels thick: in shade behind a core, on a
-  /// [casing] of the ground that much wider where it crosses one.
+  /// [casing] of the ground that much wider where it crosses one; its far
+  /// backbones under its body, its near ones over it.
   void paint(
     Canvas canvas,
     ZoomInks inks,
@@ -490,6 +618,11 @@ final class _Strokes {
         );
       }
     }
+    final DnaGrooves? grooves = this.grooves;
+    final bool grooved = grooves != null && grooves.shown > 0;
+    if (grooved) {
+      _backbones(canvas, inks, thick, grooves, shaded, near: false);
+    }
     for (final MapEntry<int, Path> body in _body.entries) {
       GeneStrand.tube(
         canvas,
@@ -499,116 +632,72 @@ final class _Strokes {
         inks,
       );
     }
-    // The skin closing up past the helix: the same lit tube, its body and
-    // its light graded along it.
-    final double lit = ((thick - 2.5) / 3).clamp(0.0, 1.0);
-    for (final (Color colour, Offset a, Offset b, double first, double last)
-        in _closing) {
-      final Color body = shade(colour, shaded ? 0.4 : 0);
-      Color at(double skin) => body.withValues(alpha: body.a * skin);
-      canvas.drawLine(
-        a,
-        b,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = thick
-          ..strokeCap = StrokeCap.butt
-          ..shader = ui.Gradient.linear(a, b, <Color>[at(first), at(last)]),
-      );
-      if (lit > 0) {
-        final Offset up = Offset(0, -0.2 * thick);
-        Color glint(double skin) => Color.lerp(
-          body,
-          inks.text,
-          0.45,
-        )!.withValues(alpha: body.a * skin * 0.55 * lit);
-        canvas.drawLine(
-          a + up,
-          b + up,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 0.35 * thick
-            ..strokeCap = StrokeCap.butt
-            ..shader = ui.Gradient.linear(a + up, b + up, <Color>[
-              glint(first),
-              glint(last),
-            ]),
-        );
-      }
-    }
-    final DnaGrooves? grooves = this.grooves;
-    if (grooves != null && grooves.shown > 0) {
-      _ridges(canvas, inks, thick, grooves, shaded);
+    if (grooved) {
+      _backbones(canvas, inks, thick, grooves, shaded, near: true);
     }
   }
 
-  /// The two backbones as ridges over the body, where they face the reader:
-  /// each a stroke for as long as it stays in front, in one colour and one
-  /// width, sampled no further apart than two pixels or 0.3 of a radian of
-  /// its turn; thinning away where a nucleosome's DNA turns more tightly than
-  /// the duplex is thick, where offset points would fold over each other.
-  void _ridges(
+  /// The two backbones' halves on the [near] side of the duplex, or its far
+  /// side: each a stroke for as long as it stays on that side, in one colour
+  /// and one width, sampled no further apart than two pixels or 0.3 of a
+  /// radian of its turn, laid round the duplex in the frames it was laid
+  /// with, as the helix's painter lays its own, in its perspective.
+  void _backbones(
     Canvas canvas,
     ZoomInks inks,
     double thick,
     DnaGrooves grooves,
-    bool shaded,
-  ) {
-    final Map<(int, int), Path> paths = <(int, int), Path>{};
-    final Map<(int, int), (Color, double)> styles =
-        <(int, int), (Color, double)>{};
+    bool shaded, {
+    required bool near,
+  }) {
+    // Each stroke by its colour and its width, a 32nd of a pixel at a time,
+    // in one number.
+    final Map<int, Path> paths = <int, Path>{};
+    final Map<int, Color> colours = <int, Color>{};
+    final Map<int, double> widths = <int, double>{};
     final double r = thick / 2;
     const double perTurn = 2 * math.pi / HelixModel.basePairsPerTurn;
+    const double focal = DnaGrooves.focal;
     for (final bool second in <bool>[false, true]) {
-      Offset? last;
+      double lastX = 0;
+      double lastY = 0;
+      bool hasLast = false;
       Path? open;
-      (int, int)? openKey;
+      int openKey = -1;
       Offset? stretchEnd;
-      Offset? lastWay;
-      for (final (Color colour, Offset a, Offset b, double from, double to)
-          in _laid) {
-        final Offset along = b - a;
-        final double length = along.distance;
+      for (final _Stretch stretch in _laid) {
+        final Offset a = stretch.a;
+        final double dx = stretch.b.dx - a.dx;
+        final double dy = stretch.b.dy - a.dy;
+        final double length = math.sqrt(dx * dx + dy * dy);
         if (length < 1e-6) {
           continue;
         }
-        final Offset way = along / length;
-        final bool joined =
-            stretchEnd != null && (stretchEnd - a).distanceSquared <= 0.01;
-        // How tightly the DNA turns here: its radius of curvature, from the
-        // turn between this stretch and the one before it.
-        double tight = 1;
-        if (joined && lastWay != null) {
-          final double bend = math
-              .atan2(
-                lastWay.dx * way.dy - lastWay.dy * way.dx,
-                lastWay.dx * way.dx + lastWay.dy * way.dy,
-              )
-              .abs();
-          if (bend > 1e-9) {
-            tight = _smooth((length / bend - r / 2) / r);
-          }
-        }
-        if (!joined) {
-          last = null;
+        if (stretchEnd == null || (stretchEnd - a).distanceSquared > 0.01) {
+          hasLast = false;
           open = null;
         }
-        stretchEnd = b;
-        lastWay = way;
-        final Offset normal = Offset(-way.dy, way.dx);
+        stretchEnd = stretch.b;
         // Its colour lifted toward the light, laid over the opaque body as
-        // far as the grooves show; as faint as the DNA there is, whatever
-        // has cleared of its skin.
+        // far as the grooves show, the far side in shade as the helix's
+        // painter shades its own by depth; as faint as the DNA there is,
+        // whatever has cleared of its skin.
+        final Color colour = stretch.colour;
         final Color opaque = colour.withValues(alpha: 1);
-        Color ink = Color.lerp(
-          opaque,
-          GeneStrand.ridge(opaque, inks),
-          grooves.shown,
-        )!;
-        if (shaded) {
-          ink = Color.lerp(ink, inks.ground, 0.4)!;
+        final Color ink = Color.lerp(
+          Color.lerp(opaque, GeneStrand.ridge(opaque, inks), grooves.shown)!,
+          inks.ground,
+          near ? (shaded ? 0.4 : 0) : (shaded ? 0.7 : 0.45),
+        )!.withValues(alpha: colour.a);
+        if (ink.a <= 0.002) {
+          continue;
         }
-        ink = ink.withValues(alpha: colour.a);
+        final int argb = ink.toARGB32();
+        final double from = stretch.from;
+        final double to = stretch.to;
+        final _Frame f = stretch.first;
+        final _Frame g = stretch.last;
+        final bool turning = !identical(f, g);
         final int steps = math.max(
           1,
           math.max(
@@ -619,46 +708,76 @@ final class _Strokes {
         for (int k = 0; k <= steps; k++) {
           final double t = k / steps;
           final double offset = from + (to - from) * t;
-          final (double out, bool front) = DnaGrooves.across(
-            grooves.angleAt(offset, second: second),
-            thick,
-          );
-          final Offset p = a + along * t + normal * out;
-          final double wide =
-              DnaGrooves.strand * grooves.strandsAt(offset) * tight;
-          if (!front || wide < 0.05 || ink.a <= 0.002) {
-            last = p;
+          // The frame here, between the stretch's two.
+          double nx = f.nx;
+          double ny = f.ny;
+          double nz = f.nz;
+          double bx = f.bx;
+          double by = f.by;
+          double bz = f.bz;
+          if (turning && t > 0) {
+            nx += (g.nx - f.nx) * t;
+            ny += (g.ny - f.ny) * t;
+            nz += (g.nz - f.nz) * t;
+            bx += (g.bx - f.bx) * t;
+            by += (g.by - f.by) * t;
+            bz += (g.bz - f.bz) * t;
+            final double n = math.sqrt(nx * nx + ny * ny + nz * nz);
+            final double q = math.sqrt(bx * bx + by * by + bz * bz);
+            nx /= n;
+            ny /= n;
+            nz /= n;
+            bx /= q;
+            by /= q;
+            bz /= q;
+          }
+          final double angle = grooves.angleAt(offset, second: second);
+          final double c = math.cos(angle);
+          final double s = math.sin(angle);
+          final double z = r * (c * nz + s * bz);
+          // The painter's perspective: nearer is larger.
+          final double scale = r <= 0 ? 1 : focal / (focal - z / r);
+          final double x = a.dx + dx * t + r * (c * nx + s * bx) * scale;
+          final double y = a.dy + dy * t + r * (c * ny + s * by) * scale;
+          final double wide = DnaGrooves.strand * grooves.strandsAt(offset);
+          if ((z > 0) != near || wide < 0.05) {
+            lastX = x;
+            lastY = y;
+            hasLast = true;
             open = null;
             continue;
           }
-          final (int, int) key = (ink.toARGB32(), (wide * 32).round());
-          if (last == null) {
-            last = p;
+          final int key = argb * 64 + (wide * 32).round();
+          if (!hasLast) {
+            lastX = x;
+            lastY = y;
+            hasLast = true;
             continue;
           }
           if (open == null || openKey != key) {
             open = paths[key] ??= Path();
-            // The width it was first drawn at: a whole ridge exactly as
-            // wide as the painter's backbones, which come to cover it.
-            styles[key] ??= (ink, wide);
-            open.moveTo(last.dx, last.dy);
+            colours[key] ??= ink;
+            // The width it was first drawn at: a whole backbone exactly as
+            // wide as the painter's, which come to cover it.
+            widths[key] ??= wide;
+            open.moveTo(lastX, lastY);
             openKey = key;
           }
-          open.lineTo(p.dx, p.dy);
-          last = p;
+          open.lineTo(x, y);
+          lastX = x;
+          lastY = y;
         }
       }
     }
-    for (final MapEntry<(int, int), Path> ridge in paths.entries) {
-      final (Color ink, double wide) = styles[ridge.key]!;
+    for (final MapEntry<int, Path> backbone in paths.entries) {
       canvas.drawPath(
-        ridge.value,
+        backbone.value,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = wide
+          ..strokeWidth = widths[backbone.key]!
           ..strokeCap = StrokeCap.round
           ..strokeJoin = StrokeJoin.round
-          ..color = ink,
+          ..color = colours[backbone.key]!,
       );
     }
   }

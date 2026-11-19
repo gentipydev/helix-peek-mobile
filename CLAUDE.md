@@ -894,11 +894,12 @@ seen:
   2026-11-18); and its DNA from the 5′ end, one DNA all the way: the bands
   sink behind it, its beads wind in and grow to their size, and it is a lit
   tube whose grooves come up as ridges, the helix's own backbones turning
-  with it (`DnaGrooves`), until its skin over the record's first bases
-  clears onto the home screen's own double helix (`DnaHelixPainter`, from
-  `lib/shared/helix/`), lying 5′ to 3′ with those bases, whole: unlike the
-  home screen's, nothing transcribes it (`transcription: null`), so no
-  strand peels away.
+  with it (`DnaGrooves`), until its skin clears: an open double helix
+  wound round each core, and over the record's first bases the home
+  screen's own double helix (`DnaHelixPainter`, from `lib/shared/helix/`),
+  lying 5′ to 3′ with those bases, whole: unlike the home screen's,
+  nothing transcribes it (`transcription: null`), so no strand peels
+  away.
   The gene reads 5′ to 3′ from its first frame whatever its strand, a
   reverse one mirrored about its middle: its mark on the strip has nothing
   inside it to turn, so nothing turns.

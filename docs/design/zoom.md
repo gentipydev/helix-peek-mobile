@@ -813,7 +813,8 @@ convention is, where it comes from, and what it decided:
   the duplex 2 nm thick against a nucleosome's 11 nm, its minor groove
   turned in to the core every ten base pairs or so (Luger et al. 1997).
   *Consequence:* the DNA is a body with its grooves from the chromatin down,
-  its backbones ridges over it, never two loose strands.
+  its backbones ridges over it, opening into its two backbones round each
+  core as the view nears the helix.
 
 Sources:
 
@@ -3628,12 +3629,19 @@ the view's width, and spent by `DnaDive` (see "Smooth motion").
   and turns its page a quarter. They turn with the helix, so the DNA is
   drawn on the ambient clock once they show, and still before (the gene's
   stop needs no clock). A core is the chromosome's stone.
-- From 320 to 125 bp the skin over the record's first 33 bases clears: the
+- From 320 to 125 bp the DNA's skin clears all along it: it is an open
+  double helix, both backbones showing, the far one in shade, wound round
+  each core, so the helix is seen round the nucleosome (the user's ask of
+  2026-11-19, after the solid rope hid it). Round a core its backbones are
+  laid in 3D about its DNA's way round, in a frame carried along it as
+  little turned as can be and evened out so that it leaves the core as it
+  came, so they never fold where the coil turns tightly on screen, and
+  join the line's on either side. Over the record's first 33 bases the
   home screen's own double helix, drawn by its own painter
   (`DnaHelixPainter`, in `lib/shared/helix/`), is under it, its backbones
-  where the ridges were, which thin away under them; past the 33rd base the
-  skin closes up again over 3 bp and the DNA goes on as a rope into the
-  first nucleosome, which slides off to the right. The helix's backbones
+  where the DNA's were, which thin away under them; past the 33rd base the
+  DNA goes on, its backbones without their bases, into the first
+  nucleosome, which slides off to the right. The helix's backbones
   take the colour of the stretch its bases lie in (exon 1's untranslated
   start, for nearly every gene) and ease to the quiet ink as its bases come
   up, from 220 to 40 bp, in their own colours. The clearing ends before the
@@ -4235,10 +4243,11 @@ frame, lighting it as the organs are lit wherever it narrows (0.5 to
     first core, on the step to the gene and at its stop.
   - `dna_grooves_test`: the painter's backbones lie where `DnaGrooves`
     puts them, to 0.3 px, at three widths and three clocks, for insulin,
-    oxytocin and lactalbumin; the ridges lie on them, only where they face
-    the reader; the DNA is drawn still while no grooves show and on the
-    ambient clock once they do; the skin clears left of the helix's fade;
-    at the DNA's stop nothing but the helix is drawn.
+    oxytocin and lactalbumin; the DNA's own backbones lie on them, the near
+    halves in their colour and the far ones in shade, before the skin
+    clears and as it does; the DNA is drawn still while no grooves show and
+    on the ambient clock once they do; the skin clears left of the helix's
+    fade; at the DNA's stop nothing but the helix is drawn.
   - `gene_dna_test`: the stop one picture from either side (8 levels), the
     5′ ends one, every stage of the dive its time on every gene's step.
 - Built proteins in the tests:

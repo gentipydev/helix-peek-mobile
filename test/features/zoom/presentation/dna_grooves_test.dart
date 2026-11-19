@@ -9,6 +9,7 @@ import 'package:helixpeek/features/zoom/domain/zoom_depth.dart';
 import 'package:helixpeek/features/zoom/domain/zoom_motion.dart';
 import 'package:helixpeek/features/zoom/presentation/scenes/chromatin_fibre.dart';
 import 'package:helixpeek/features/zoom/presentation/scenes/dna_scene.dart';
+import 'package:helixpeek/features/zoom/presentation/scenes/gene_strand.dart';
 import 'package:helixpeek/features/zoom/presentation/scenes/zoom_scene.dart';
 import 'package:helixpeek/features/zoom/presentation/scenes/zoom_subject.dart';
 import 'package:helixpeek/features/zoom/presentation/zoom_inks.dart';
@@ -227,12 +228,15 @@ void main() {
     }
   });
 
-  testWidgets('the DNA’s ridges lie on its backbones, and only where they '
-      'face the reader', (WidgetTester tester) async {
+  testWidgets('the DNA’s backbones lie where the helix’s would, the near '
+      'halves in their own colour and the far ones in shade, before its skin '
+      'clears and as it does', (WidgetTester tester) async {
     final ZoomInks inks = await _inks(tester);
     for (final ProteinTarget t in genes) {
       final ZoomStage stage = _stage(t);
-      for (final double span in <double>[600, 400, 300]) {
+      final ZoomSubject subject = stage.subject;
+      final double scale = subject.track.geneLengthBp / subject.layout.length;
+      for (final double span in <double>[600, 400, 300, 200]) {
         for (final double clock in <double>[0, 5.5, 13]) {
           final (DnaScene scene, ZoomFrame frame) = _dna(
             stage,
@@ -246,11 +250,26 @@ void main() {
           final double x0 = scene.dnaX(frame, 0);
           final double perBase = scene.dnaX(frame, 1) - x0;
           double offsetOf(double x) => (x - x0) / perBase;
+          // A backbone's colour where it is near, and where it is far.
+          (Color, Color) inksAt(double offset) {
+            final Color body = GeneStrand.ink(
+              inks,
+              subject.layout.kindAt(offset / scale),
+            );
+            final Color near = Color.lerp(
+              body,
+              GeneStrand.ridge(body, inks),
+              grooves.shown,
+            )!;
+            return (near, Color.lerp(near, inks.ground, 0.45)!);
+          }
+
           final _Screen screen = _Screen();
           scene.paintAmbient(screen, frame);
-          int checked = 0;
+          int near = 0;
+          int far = 0;
           for (final (Path path, Paint paint) in screen.paths) {
-            // The ridges: round-capped, no wider than a backbone.
+            // The backbones: round-capped, no wider than the painter's.
             if (paint.strokeCap != StrokeCap.round ||
                 paint.strokeWidth > DnaGrooves.strand + 1e-9) {
               continue;
@@ -263,27 +282,46 @@ void main() {
                 if (offset < 1 || offset > grooves.anchor - 1) {
                   continue;
                 }
+                final String what = '${t.slug} at $span bp, clock $clock, '
+                    'base $offset';
                 expect(
                   _offFormula(grooves, thick, mid, p.dx, p.dy, offsetOf),
                   lessThan(0.3),
-                  reason: '${t.slug} at $span bp, clock $clock, base $offset',
+                  reason: what,
                 );
-                // In front: the backbone there faces the reader.
-                final bool front = <bool>[false, true].any((bool second) {
+                // Its colour is its stretch's: within half a base of where
+                // the stretch changes, either side's.
+                final int drawn = paint.color.toARGB32();
+                bool isNear = false;
+                bool known = false;
+                for (final double side in <double>[-0.5, 0, 0.5]) {
+                  final (Color nearInk, Color farInk) = inksAt(offset + side);
+                  if (drawn == nearInk.toARGB32()) {
+                    isNear = true;
+                    known = true;
+                  } else if (drawn == farInk.toARGB32()) {
+                    known = true;
+                  }
+                }
+                expect(known, isTrue, reason: '$what: a backbone’s colour');
+                // On the side of the duplex its colour says: the backbone
+                // there faces the reader, or does not.
+                final bool sided = <bool>[false, true].any((bool second) {
                   final double angle = grooves.angleAt(offset, second: second);
                   final (double across, bool facing) = DnaGrooves.across(
                     angle,
                     thick,
                   );
                   return (mid + across - p.dy).abs() < 0.3 &&
-                      (facing || math.sin(angle).abs() < 0.35);
+                      (facing == isNear || math.sin(angle).abs() < 0.35);
                 });
-                expect(front, isTrue, reason: '${t.slug} at $span, $offset');
-                checked++;
+                expect(sided, isTrue, reason: '$what: its side');
+                isNear ? near++ : far++;
               }
             }
           }
-          expect(checked, greaterThan(0), reason: '${t.slug} at $span');
+          expect(near, greaterThan(0), reason: '${t.slug} at $span: near');
+          expect(far, greaterThan(0), reason: '${t.slug} at $span: far');
         }
       }
     }

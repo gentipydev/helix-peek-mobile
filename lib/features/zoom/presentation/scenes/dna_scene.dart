@@ -43,12 +43,13 @@ import 'zoom_subject.dart';
 ///   the helix's own, at its angle and turning with it ([DnaGrooves]), so a
 ///   nucleosome's DNA is a grooved rope round its core, never loose strands
 ///   (the user's choice of 2026-11-18);
-/// - over the record's first bases the DNA's skin clears, cut square at the
-///   last of them, and the home screen's own double helix
-///   ([DnaHelixPainter]) is there under it, its backbones where the ridges
+/// - then its skin clears, all along it: it is an open double helix, both
+///   backbones showing, the far one in shade, wound round each core (the
+///   user's ask of 2026-11-19, to see the helix round the nucleosome); and
+///   over the record's first bases the home screen's own double helix
+///   ([DnaHelixPainter]) is there under it, its backbones where the DNA's
 ///   were, easing from the stretch's colour to the quiet ink as its bases
-///   come up in their own colours; past them the DNA keeps its skin, into
-///   the first nucleosome;
+///   come up in their own colours;
 /// - as its 5′ end is named, each base's letter comes up in its ball, which
 ///   grows to hold it ([DnaHelixPainter.letteredGrowth]).
 ///
@@ -112,9 +113,10 @@ final class DnaScene extends ZoomScene {
   /// so no gene's stop ever has them and the gene stands still there.
   static const (double, double) grooving = (900, 350);
 
-  /// Where the DNA's skin over the helix's bases clears onto the helix: done
-  /// before the helix's 3′ end, 33 bases in, reaches the fade at the
-  /// canvas's right edge (at 121 bp across).
+  /// Where the DNA's skin clears, all along it, to an open double helix, and
+  /// over the helix's bases onto the helix: done before the helix's 3′ end,
+  /// 33 bases in, reaches the fade at the canvas's right edge (at 121 bp
+  /// across).
   static const (double, double) clearing = (320, 125);
 
   /// How far the DNA's grooves show over its body: none at the gene's stop,
@@ -122,8 +124,8 @@ final class DnaScene extends ZoomScene {
   static double groovesAt(double span) =>
       _fall(span, grooving.$1, grooving.$2);
 
-  /// How far the skin over the helix's bases has cleared, the painter's
-  /// helix coming up under it.
+  /// How far the DNA's skin has cleared, the painter's helix coming up
+  /// under it over the helix's bases.
   static double clearedAt(double span) =>
       _fall(span, clearing.$1, clearing.$2);
 
@@ -477,14 +479,10 @@ final class DnaScene extends ZoomScene {
       packed: packedAt(span),
       thick: thick,
       grooves: grooves,
-      marks: <double>[
-        ...subject.fibreMarks,
-        bare.toDouble(),
-        bare + DnaGrooves.lip,
-      ],
+      marks: <double>[...subject.fibreMarks, bare.toDouble()],
       // The gene's, along its exons in their colours; the DNA either side of
-      // it as it comes and goes. Its skin over the helix's bases clears by
-      // the grooves' own reckoning, closing up again past them.
+      // it as it comes and goes. Its skin clears by the grooves' own
+      // reckoning.
       colourAt: (double offset) {
         final Color ink = GeneStrand.ink(inks, layout.kindAt(offset / scale));
         return offset < 0 || offset > end
